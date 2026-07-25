@@ -111,6 +111,31 @@ header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-rad
   border-top-color:var(--teal);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* dokunmatik seçim chip'leri */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--white);color:var(--text);
+  padding:11px 16px;border-radius:10px;min-height:46px;font-weight:650;font-size:15px;flex:0 0 auto}
+.chip:active{background:var(--mint)}
+.chip.on{background:var(--deep);color:#fff;border-color:var(--deep)}
+.chip[disabled]{opacity:.45}
+.f.bad .chips .chip{border-color:var(--red)}
+/* sekmeler */
+.tabs2{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch}
+.tabs2::-webkit-scrollbar{height:0}
+.tab2{flex:0 0 auto;border:1px solid var(--line);background:var(--white);color:var(--deep);
+  padding:9px 14px;border-radius:20px;font-size:13px;font-weight:650;white-space:nowrap}
+.tab2.on{background:var(--deep);color:#fff;border-color:var(--deep)}
+.tab2 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--line);margin-left:7px;vertical-align:1px}
+.tab2.done .dot{background:var(--green)}
+.panel{display:none}
+.panel.on{display:block}
+/* ID sayaç */
+.idbox{display:flex;gap:8px;align-items:stretch}
+.idbox input{flex:1;text-align:center;font-size:18px}
+.idstep{width:54px;min-height:46px;border:1px solid var(--line);background:var(--white);
+  color:var(--deep);border-radius:9px;font-size:24px;font-weight:700;line-height:1}
+.idstep:active{background:var(--mint)}
+.idstep[disabled]{opacity:.4}
 /* Giriş ekranı */
 #login{position:fixed;inset:0;background:var(--paper);z-index:100;display:flex;
   align-items:center;justify-content:center;padding:24px}
@@ -207,49 +232,123 @@ function logout(){ if(confirm("Çıkış yapılsın mı?")) auth.signOut(); }
 
 /* ── form tanımları ── */
 const EH=["","E","H"];
-const A=[
- ["study_id","Çalışma ID","text",{req:1,mono:1,ph:"CS-001"}],
- ["cs_tipi","Sezaryen","select",{req:1,opt:["","Elektif","Acil"]}],
- ["cerrahi_bitis","Cerrahi bitiş","datetime-local",{req:1,hint:"Postop saat 0 kabul edilir"}],
- ["cihaz_no","Cihaz no","select",{req:1,opt:["","1","2","3"]}],
- ["takma","Cihaz takma","datetime-local",{req:1,hint:"Kayıt bu anda AÇILIR · Fitrockr eşleştirmesi için gerekli"}],
- ["onam","Bilgilendirilmiş onam alındı","select",{req:1,opt:EH,hint:"Yazılı onam alınmadan veri girişine geçilemez"}],
- ["yas","Yaş","num",{min:15,max:55}],
- ["boy_cm","Boy (cm)","num",{min:130,max:200}],
- ["kilo_kg","Kilo (kg)","num",{min:35,max:180,step:.1}],
- ["bmi","BMI","calc",{}],
- ["gebelik_haftasi","Gebelik haftası","num",{min:24,max:43,step:.1}],
- ["para","Para","num",{min:0,max:12}],
- ["anestezi","Anestezi","select",{opt:["","Spinal","Genel"]}],
- ["it_morfin","İntratekal morfin","select",{opt:EH,hint:"Ağrı ve uykuyu güçlü etkiler"}]
+// Başlangıç — bölümlere ayrılmış tam CRF (HRV/uyku/Garmin değişkenleri elle girilmez; Fitrockr'dan alınır)
+const A_SECTIONS=[
+ {t:"Kimlik & demografik", f:[
+  ["study_id","Çalışma ID","id",{req:1,mono:1,ph:"CS-001"}],
+  ["yas","Yaş (yıl)","num",{min:15,max:55}],
+  ["boy_cm","Boy (cm)","num",{min:130,max:200}],
+  ["kilo_gebelik_oncesi","Gebelik öncesi kilo (kg)","num",{min:35,max:180,step:.1}],
+  ["bmi_gebelik_oncesi","Gebelik öncesi BMI","calc",{}],
+  ["kilo_dogum","Doğumdaki kilo (kg)","num",{min:40,max:200,step:.1}],
+  ["bmi_dogum","Doğumdaki BMI","calc",{}],
+  ["egitim","Eğitim düzeyi","select",{opt:["","İlkokul","Ortaokul","Lise","Üniversite","Lisansüstü"]}],
+  ["sigara","Sigara","select",{opt:EH}],
+  ["kafein_bardak","Günlük kafein (bardak)","num",{min:0,max:20,hint:"HRV'yi akut etkiler"}]
+ ]},
+ {t:"Obstetrik öykü & bu gebelik", f:[
+  ["gravida","Gravida","num",{min:1,max:20}],
+  ["para","Para","num",{min:0,max:12}],
+  ["gebelik_haftasi","Gebelik haftası (doğumda)","num",{min:24,max:43,step:.1}],
+  ["cogul","Çoğul gebelik","select",{opt:EH}],
+  ["onceki_cs","Önceki sezaryen sayısı","num",{min:0,max:10}],
+  ["preeklampsi","Preeklampsi / HT","select",{opt:EH,hint:"Otonom disfonksiyonla ilişkili"}],
+  ["gdm","Gestasyonel DM","select",{opt:EH}],
+  ["tiroid","Tiroid hastalığı","select",{opt:EH}],
+  ["komorbidite","Diğer komorbidite","text",{ph:"Yok"}]
+ ]},
+ {t:"Cerrahi & anestezi", f:[
+  ["cs_tipi","Sezaryen","select",{req:1,opt:["","Elektif","Acil"]}],
+  ["endikasyon","Sezaryen endikasyonu","text",{}],
+  ["travay","Travay oldu mu","select",{opt:EH}],
+  ["anestezi","Anestezi tipi","select",{opt:["","Spinal","Genel"]}],
+  ["it_morfin","İntratekal morfin","select",{opt:EH,hint:"Ağrı ve uykuyu güçlü etkiler"}],
+  ["cerrahi_sure","Cerrahi süre (dk)","num",{min:10,max:300}],
+  ["ebl","Tahmini kan kaybı (mL)","num",{min:50,max:5000,step:10}],
+  ["uterotonik","Uterotonik ajan(lar)","text",{ph:"Oksitosin"}],
+  ["iv_sivi","İntraop IV sıvı (mL)","num",{min:0,max:8000,step:50}],
+  ["intraop_komp","İntraop komplikasyon","text",{ph:"Yok"}],
+  ["cerrahi_bitis","Cerrahi bitiş (tarih-saat)","datetime-local",{req:1,hint:"Postop saat 0 kabul edilir"}]
+ ]},
+ {t:"Laboratuvar", f:[
+  ["hb_pre","Preop hemoglobin (g/dL)","num",{min:4,max:18,step:.1}],
+  ["hb_post","Postop hemoglobin (g/dL)","num",{min:4,max:18,step:.1,hint:"Anemi HR ve PPG sinyalini etkiler"}],
+  ["hct_post","Postop hematokrit (%)","num",{min:15,max:60,step:.1}],
+  ["transfuzyon","Kan transfüzyonu","select",{opt:EH}]
+ ]},
+ {t:"Uyku & çevre karıştırıcıları", f:[
+  ["oda_tipi","Oda tipi","select",{opt:["","Tek","Çok"],hint:"Hastane uykusunun temel karıştırıcısı"}],
+  ["refakatci","Refakatçi var","select",{opt:EH}],
+  ["rooming","Bebek anne yanında","select",{opt:EH,hint:"Postpartum uykuyu en çok etkileyen değişken"}],
+  ["emzirme","Emzirme","select",{opt:["","Tam","Kısmi","Yok"]}],
+  ["bebek_yybu","Bebek YYBÜ'de","select",{opt:EH}],
+  ["bebek_agirlik","Bebek doğum ağırlığı (g)","num",{min:500,max:6000,step:10}],
+  ["apgar5","APGAR 5. dk","num",{min:0,max:10}]
+ ]},
+ {t:"Cihaz & onam", f:[
+  ["cihaz_no","Cihaz no","select",{req:1,opt:["","1","2","3"]}],
+  ["kol","Takılan kol","select",{opt:["","Non-dominant","Dominant"]}],
+  ["takma","Cihaz takma (tarih-saat)","datetime-local",{req:1,hint:"Kayıt bu anda AÇILIR · Fitrockr eşleştirmesi için gerekli"}],
+  ["onam","Bilgilendirilmiş onam alındı","select",{req:1,opt:EH,hint:"E olmadan 24/48. saat açılmaz"}]
+ ]}
 ];
-const C=[
- ["cikarma","Cihaz çıkarma","datetime-local",{req:1,hint:"Bu değer girilip kayıt kapatılınca izlem biter"}],
- ["wear","Takı süresi (saat)","calc",{}],
- ["opioid_doz","Kurtarma opioid dozu (adet)","num",{min:0,max:20,hint:"Dozları saymak yeterli; mg çevirmeye gerek yok"}],
- ["hb_post","Postop Hb (g/dL)","num",{min:4,max:18,step:.1}],
- ["bebek_yybu","Bebek YYBÜ'de","select",{opt:EH}],
- ["komplikasyon","Komplikasyon (varsa)","text",{ph:"Yok"}],
- ["dahil","Analize dahil","select",{req:1,opt:EH}],
- ["not","Not","text",{}]
+// Kapanış — postop seyir + cihaz çıkarma & veri kalitesi
+const C_SECTIONS=[
+ {t:"Postoperatif seyir", f:[
+  ["ilk_mobilizasyon","İlk mobilizasyon (postop saat)","num",{min:0,max:72,step:.5}],
+  ["ilk_oral","İlk oral alım (postop saat)","num",{min:0,max:72,step:.5}],
+  ["ilk_gaz","İlk gaz çıkışı (postop saat)","num",{min:0,max:96,step:.5}],
+  ["foley","Foley çekilme (postop saat)","num",{min:0,max:96,step:.5}],
+  ["opioid_mg","Toplam opioid (morfin eşd. mg)","num",{min:0,max:200,step:.5,hint:"Morfin eşdeğeri; ikincil sonuç + karıştırıcı"}],
+  ["nsaid_mg","Toplam NSAİD (mg)","num",{min:0,max:5000,step:10}],
+  ["parasetamol_mg","Toplam parasetamol (mg)","num",{min:0,max:12000,step:100}],
+  ["antiemetik","Antiemetik kullanıldı","select",{opt:EH}],
+  ["bulanti_kusma","Bulantı-kusma","select",{opt:EH}],
+  ["komplikasyon","Komplikasyon (keşifsel)","text",{ph:"Yok"}],
+  ["taburculuk","Taburculuk (postop saat)","num",{min:12,max:168,step:.5}]
+ ]},
+ {t:"Cihaz çıkarma & veri kalitesi", f:[
+  ["cikarma","Cihaz çıkarma (tarih-saat)","datetime-local",{req:1,hint:"Girilip kayıt kapatılınca izlem biter"}],
+  ["wear","Toplam takı süresi (saat)","calc",{}],
+  ["periferik_odem","Periferik ödem","select",{opt:EH,hint:"PPG sinyal kalitesini düşürür"}],
+  ["sinyal_kabul","Sinyal kalitesi kabul","select",{opt:EH,hint:"Önceden tanımlı kalite kriterini karşılıyor mu"}],
+  ["dahil","Analize dahil","select",{req:1,opt:EH}],
+  ["not","Notlar","text",{}]
+ ]}
 ];
+const A=A_SECTIONS.reduce(function(a,s){return a.concat(s.f);},[]);
+const C=C_SECTIONS.reduce(function(a,s){return a.concat(s.f);},[]);
 const RC_VARSAYILAN=["1. Uyku derinliği","2. Uykuya dalma süresi","3. Uyanma sıklığı",
  "4. Uyanık kalınan süre","5. Uyku kalitesi","6. Ortam gürültüsü (toplama dahil değil)"];
+// TASLAK madde metinleri — resmî ObsQoR-11T / RCSQ ile DOĞRULANMALIDIR (kullanıcı onayına tabi)
+const OBS_DRAFT=[
+ "Ağrım kontrol altındaydı (dinlenirken)",
+ "Şiddetli ağrım olmadı",
+ "Bulantı veya kusmam olmadı",
+ "Baş dönmesi yaşamadım",
+ "Titreme / üşüme yaşamadım",
+ "Kendimi rahat hissettim",
+ "Kendimi kontrolde hissettim",
+ "Bebeğimi kucağıma alabildim",
+ "Hareket edebildim (yürüme / yatakta dönme)",
+ "Kişisel bakımımı yapabildim",
+ "Endişeli veya kaygılı değildim"];
+const RCSQ_DRAFT=RC_VARSAYILAN.slice();
 const A_KEYS=A.map(function(f){return f[0];});
 const C_KEYS=C.map(function(f){return f[0];});
 const TASK_KEYS={
  a:  A_KEYS.concat([]),
- b24:["b24q","b24r","b24_nrs_din","b24_nrs_har","b24_gece_emzirme","b24_sedatif","rooming"],
+ b24:["b24q","b24r","b24_nrs_din","b24_nrs_har","b24_gece_emzirme","b24_sedatif"],
  b48:C_KEYS.concat(["b48q","b48r","b48_nrs_din","b48_nrs_har","b48_gece_emzirme","b48_sedatif"])
 };
 
 let MET={q:[],r:[]};
 let RECS={};            // study_id -> doc verisi (canlı)
 let id=null,task=null,D={},dirty=false,busy=false,view="login",LOCKED=false;
-let unsubList=null;
+let unsubList=null,TABCTX=null;
 
-const qMet=i=>(MET.q&&MET.q[i-1])?MET.q[i-1]:("Madde "+i);
-const rMet=x=>(MET.r&&MET.r[x])?MET.r[x]:RC_VARSAYILAN[x];
+const qMet=i=>(MET.q&&MET.q[i-1]&&(""+MET.q[i-1]).trim())?MET.q[i-1]:(OBS_DRAFT[i-1]||("Madde "+i));
+const rMet=x=>(MET.r&&MET.r[x]&&(""+MET.r[x]).trim())?MET.r[x]:(RCSQ_DRAFT[x]||RC_VARSAYILAN[x]);
 const metVar=()=>!!(MET.q&&MET.q.filter(function(v){return v&&v.trim();}).length===11);
 const el=i=>document.getElementById(i),app=el("app"),bar=el("bar");
 let tT;const toast=(m,w)=>{const t=el("toast");t.textContent=m;t.className="toast show"+(w?" warn":"");
@@ -266,27 +365,73 @@ const STAT_LBL={acik:"AÇIK",aktif:"AKTİF",kapali:"KAPALI"};
 
 /* ── alan bileşenleri ── */
 function fh(k,l,t,o){o=o||{};
- const r=o.req?" <span class='req'>*</span>":"";let i;
- if(t==="select")i="<select id='x_"+k+"' data-k='"+k+"'>"+(o.opt||[]).map(v=>
-   "<option value='"+esc(v)+"'>"+(v===""?"—":esc(v))+"</option>").join("")+"</select>";
- else if(t==="calc")i="<input id='x_"+k+"' data-k='"+k+"' readonly>";
- else{const n=t==="num";
+ var r=o.req?" <span class='req'>*</span>":"";var i;
+ if(t==="select"){
+   var opts=(o.opt||[]).filter(function(v){return v!=="";});
+   i="<input type='hidden' id='x_"+k+"' data-k='"+k+"'>"+
+     "<div class='chips' id='c_"+k+"'>"+opts.map(function(v){
+       return "<button type='button' class='chip' data-k='"+esc(k)+"' data-v='"+esc(v)+"'>"+esc(v)+"</button>";}).join("")+"</div>";
+ } else if(t==="id"){
+   i="<div class='idbox'><button type='button' class='idstep' onclick='stepId(-1)' aria-label='azalt'>−</button>"+
+     "<input id='x_"+k+"' data-k='"+k+"' type='text'"+(o.mono?" data-mono='1'":"")+(o.ph?" placeholder='"+esc(o.ph)+"'":"")+">"+
+     "<button type='button' class='idstep' onclick='stepId(1)' aria-label='arttır'>+</button></div>";
+ } else if(t==="calc"){ i="<input id='x_"+k+"' data-k='"+k+"' readonly>";
+ } else{ var n=t==="num";
    i="<input id='x_"+k+"' data-k='"+k+"' type='"+(n?"number":t)+"'"+(n?" inputmode='decimal'":"")+
    (o.mono?" data-mono='1'":"")+(o.min!=null?" min='"+o.min+"'":"")+(o.max!=null?" max='"+o.max+"'":"")+
    (o.step?" step='"+o.step+"'":"")+(o.ph?" placeholder='"+esc(o.ph)+"'":"")+">";}
  return "<div class='f"+(t==="calc"?" calc":"")+"' id='w_"+k+"'><label for='x_"+k+"'>"+esc(l)+r+"</label>"+i+
    (o.hint?"<div class='hint'>"+esc(o.hint)+"</div>":"")+"<div class='err'>Aralık dışı değer</div></div>";}
-function bind(defs){defs.forEach(f=>{const k=f[0],t=f[2],o=f[3]||{};const e=el("x_"+k);if(!e)return;
+function wireChips(k){
+ var hid=el("x_"+k),grp=el("c_"+k);if(!grp||!hid)return;
+ hid.value=D[k]==null?"":D[k];
+ grp.querySelectorAll(".chip").forEach(function(b){
+   b.classList.toggle("on",b.dataset.v===(D[k]||"")&&(D[k]||"")!=="");
+   if(LOCKED){b.disabled=true;return;}
+   b.addEventListener("click",function(){
+     var v=(hid.value===b.dataset.v)?"":b.dataset.v;
+     hid.value=v;D[k]=v;dirty=true;el("w_"+k).classList.remove("bad");
+     grp.querySelectorAll(".chip").forEach(function(x){x.classList.toggle("on",x.dataset.v===v&&v!=="");});
+     if(TABCTX)refreshTabs(TABCTX.scope,TABCTX.sections);calc();});
+ });
+}
+function bind(defs){defs.forEach(function(f){var k=f[0],t=f[2],o=f[3]||{};
+ if(t==="select"){wireChips(k);return;}
+ var e=el("x_"+k);if(!e)return;
  e.value=D[k]==null?"":D[k];
  if(LOCKED){e.disabled=true;return;}
- e.addEventListener("input",()=>{D[k]=e.value;dirty=true;
-   if(t==="num"&&e.value!==""){const v=parseFloat(e.value);
+ e.addEventListener("input",function(){D[k]=e.value;dirty=true;
+   if(t==="num"&&e.value!==""){var v=parseFloat(e.value);
      el("w_"+k).classList.toggle("bad",(o.min!=null&&v<o.min)||(o.max!=null&&v>o.max));}
-   calc();});});calc();}
+   if(TABCTX)refreshTabs(TABCTX.scope,TABCTX.sections);calc();});
+});calc();}
+/* ── sekme + ID yardımcıları ── */
+function renderTabs(scope,panels){
+ var tabs="<div class='tabs2'>"+panels.map(function(p,i){
+   return "<button type='button' class='tab2"+(i===0?" on":"")+"' id='tab_"+scope+"_"+i+"' "+
+     "onclick=\"showPanel('"+scope+"',"+i+","+panels.length+")\">"+esc(p.t)+"<span class='dot'></span></button>";
+ }).join("")+"</div>";
+ var body=panels.map(function(p,i){return "<div class='panel"+(i===0?" on":"")+"' id='pan_"+scope+"_"+i+"'>"+p.body+"</div>";}).join("");
+ return tabs+body;
+}
+function showPanel(scope,i,n){for(var j=0;j<n;j++){var t=el("tab_"+scope+"_"+j),p=el("pan_"+scope+"_"+j);
+ if(t)t.classList.toggle("on",j===i);if(p)p.classList.toggle("on",j===i);}}
+function refreshTabs(scope,sections){sections.forEach(function(s,i){
+ var any=s.f.some(function(f){var v=D[f[0]];return v!==undefined&&v!==""&&v!=null;});
+ var tb=el("tab_"+scope+"_"+i);if(tb)tb.classList.toggle("done",any);});}
+function nextId(){var mx=0;Object.keys(RECS).forEach(function(k){var m=/(\d+)\s*$/.exec(k);if(m)mx=Math.max(mx,parseInt(m[1],10));});
+ return "CS-"+String(mx+1).padStart(3,"0");}
+function stepId(d){var e=el("x_study_id");if(!e||e.readOnly)return;
+ var m=/^(.*?)(\d+)\s*$/.exec(e.value||"CS-000");
+ if(m){var num=Math.max(0,parseInt(m[2],10)+d);e.value=m[1]+String(num).padStart(m[2].length,"0");}
+ D.study_id=e.value;dirty=true;if(TABCTX)refreshTabs(TABCTX.scope,TABCTX.sections);}
 function calc(){
- if(el("x_bmi")){const b=parseFloat(D.boy_cm),k=parseFloat(D.kilo_kg);
-   el("x_bmi").value=(b&&k)?(k/Math.pow(b/100,2)).toFixed(1):"";D.bmi=el("x_bmi").value;}
- if(el("x_wear")){const a=D.takma,b=D.cikarma;
+ var boy=parseFloat(D.boy_cm);
+ if(el("x_bmi_gebelik_oncesi")){var k1=parseFloat(D.kilo_gebelik_oncesi);
+   el("x_bmi_gebelik_oncesi").value=(boy&&k1)?(k1/Math.pow(boy/100,2)).toFixed(1):"";D.bmi_gebelik_oncesi=el("x_bmi_gebelik_oncesi").value;}
+ if(el("x_bmi_dogum")){var k2=parseFloat(D.kilo_dogum);
+   el("x_bmi_dogum").value=(boy&&k2)?(k2/Math.pow(boy/100,2)).toFixed(1):"";D.bmi_dogum=el("x_bmi_dogum").value;}
+ if(el("x_wear")){var a=D.takma,b=D.cikarma;
    el("x_wear").value=(a&&b)?(((new Date(b)-new Date(a))/3600000).toFixed(1)):"";D.wear=el("x_wear").value;}}
 
 /* ── ölçek metni ── */
@@ -310,8 +455,8 @@ function renderListe(){
    "<button class='btn sec' onclick='exportAll()'>Dışa aktar</button>"+
    "<button class='btn' onclick='yeni()'>Yeni hasta</button>";
  el("metUyari").innerHTML=metVar()?"":
-   "<div class='banner err'><b>Anket soruları henüz girilmedi.</b> Veri toplamaya başlamadan önce "+
-   "<b>Anket metni</b> ekranından resmî Türkçe madde metinlerini bir kez yapıştırın.</div>";
+   "<div class='banner'><b>Taslak ölçek metni kullanılıyor.</b> Sahada kullanmadan önce resmî valide "+
+   "ObsQoR-11T/RCSQ metinlerini <b>Anket metni</b> ekranından girip doğrulayın.</div>";
  const ids=Object.keys(RECS).sort(),b=el("pl");
  if(!ids.length){b.innerHTML="<div class='empty'>Henüz hasta yok.<br><b>Yeni hasta</b> ile başlayın.</div>";return;}
  b.className="plist";
@@ -383,14 +528,17 @@ async function yenidenAc(){
  }catch(e){toast("Açılamadı: "+(e.code||e.message),1);}
 }
 
-/* ── ölçek formu ── */
-function scaleHTML(pre,qv,rv,n){
- let h="<div class='card'><h2>ObsQoR-11T</h2><div class='in' id='"+pre+"q'>";
- for(let i=1;i<=11;i++)h+="<div class='q'><span class='lb'>"+esc(qMet(i))+"</span>"+
+/* ── ölçek formu (sekmelenebilir parçalar) ── */
+function obsqorCard(pre,qv){
+ var h="<div class='card'><h2>ObsQoR-11T</h2><div class='in' id='"+pre+"q'>";
+ for(var i=1;i<=11;i++)h+="<div class='q'><span class='lb'>"+esc(qMet(i))+"</span>"+
    "<input type='number' inputmode='numeric' min='0' max='10' data-i='"+i+"' value='"+
    esc((qv||[])[i-1]==null?"":(qv||[])[i-1])+"'></div>";
- h+="<div class='total'><span>Toplam (0&ndash;110)</span><b id='"+pre+"qt'>&mdash;</b></div></div></div>";
- h+="<div class='card'><h2>RCSQ &mdash; dün geceki uyku</h2><div class='in' id='"+pre+"r'>";
+ h+="<div class='total'><span>Ham toplam (0&ndash;110)</span><b id='"+pre+"qt'>&mdash;</b></div></div></div>";
+ return h;
+}
+function rcsqCard(pre,rv){
+ var h="<div class='card'><h2>RCSQ &mdash; dün geceki uyku</h2><div class='in' id='"+pre+"r'>";
  RC_VARSAYILAN.forEach(function(_,x){var v=(rv||[])[x];
   h+="<div class='vas'><div class='top'><span class='lb'>"+esc(rMet(x))+"</span>"+
    "<span class='val' id='"+pre+"v"+x+"'>"+(v!=null&&v!==""?esc(v):"&mdash;")+"</span></div>"+
@@ -398,26 +546,16 @@ function scaleHTML(pre,qv,rv,n){
    "' data-t='"+(v!=null&&v!==""?1:0)+"'>"+
    "<div class='ends'><span>0 &middot; en kötü</span><span>100 &middot; en iyi</span></div></div>";});
  h+="<div class='total'><span>RCSQ toplam (ilk 5 ort.)</span><b id='"+pre+"rt'>&mdash;</b></div></div></div>";
- h+="<div class='card'><h2>Ağrı ve gece</h2><div class='in'><div class='two'>"+
-  "<div class='f' id='w_nrs_din'><label for='x_nrs_din'>NRS dinlenim (0&ndash;10)</label>"+
-  "<input id='x_nrs_din' type='number' inputmode='numeric' min='0' max='10' value='"+esc(n.din==null?"":n.din)+
-  "'><div class='err'>Aralık dışı</div></div>"+
-  "<div class='f' id='w_nrs_har'><label for='x_nrs_har'>NRS hareket (0&ndash;10)</label>"+
-  "<input id='x_nrs_har' type='number' inputmode='numeric' min='0' max='10' value='"+esc(n.har==null?"":n.har)+
-  "'><div class='err'>Aralık dışı</div></div></div>"+
-  "<div class='two'>"+
-  "<div class='f' id='w_gece_emzirme'><label for='x_gece_emzirme'>Gece emzirme sayısı</label>"+
-  "<input id='x_gece_emzirme' type='number' inputmode='numeric' min='0' max='15' value='"+
-  esc(n.emz==null?"":n.emz)+"'><div class='hint'>Uyku parçalanmasının başlıca nedeni</div>"+
-  "<div class='err'>Aralık dışı</div></div>"+
-  "<div class='f' id='w_sedatif'><label for='x_sedatif'>Gece sedatif / uyku ilacı</label>"+
-  "<select id='x_sedatif'><option value=''>&mdash;</option><option>E</option><option>H</option></select>"+
-  "<div class='hint'>Uyku ve HRV ölçümünü doğrudan değiştirir</div></div></div>"+
-  (n.room?"<div class='f' id='w_rooming'><label for='x_rooming'>Bebek anne yanında</label>"+
-  "<select id='x_rooming'><option value=''>&mdash;</option><option>E</option><option>H</option></select></div>":"")+
-  "</div></div>";
  return h;
 }
+function agriDefs(pre){return [
+ [pre+"_nrs_din","NRS dinlenim (0–10)","num",{min:0,max:10}],
+ [pre+"_nrs_har","NRS hareket (0–10)","num",{min:0,max:10}],
+ [pre+"_gece_emzirme","Gece emzirme sayısı","num",{min:0,max:15,hint:"Uyku parçalanmasının başlıca nedeni"}],
+ [pre+"_sedatif","Gece sedatif / uyku ilacı","select",{opt:EH,hint:"Uyku ve HRV ölçümünü doğrudan değiştirir"}]
+];}
+function agriCard(pre){return "<div class='card'><h2>Ağrı & gece</h2><div class='in'>"+
+ agriDefs(pre).map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>";}
 function bindScale(pre,tag){
  var qb=el(pre+"q"),rb=el(pre+"r");
  D[tag+"q"]=D[tag+"q"]||[];D[tag+"r"]=D[tag+"r"]||[];
@@ -430,7 +568,6 @@ function bindScale(pre,tag){
  if(LOCKED){
    qb.querySelectorAll("input").forEach(function(i){i.disabled=true;});
    rb.querySelectorAll("input").forEach(function(i){i.disabled=true;});
-   ["nrs_din","nrs_har","gece_emzirme","sedatif","rooming"].forEach(function(k){var e=el("x_"+k);if(e)e.disabled=true;});
    uq();ur();return;
  }
  qb.querySelectorAll("input").forEach(function(i){i.addEventListener("input",function(){
@@ -438,15 +575,6 @@ function bindScale(pre,tag){
  rb.querySelectorAll("input").forEach(function(i){i.addEventListener("input",function(){
    i.dataset.t="1";el(pre+"v"+i.dataset.i).textContent=i.value;
    D[tag+"r"][+i.dataset.i]=i.value;dirty=true;ur();});});ur();
- ["nrs_din","nrs_har","gece_emzirme","sedatif","rooming"].forEach(function(k){
-   var e=el("x_"+k);if(!e)return;
-   var key=(k==="rooming")?"rooming":(tag+"_"+k);
-   e.value=D[key]==null?"":D[key];
-   e.addEventListener("input",function(){D[key]=e.value;dirty=true;
-     if(e.type==="number"&&e.value!==""){var v=+e.value,mx=(k==="gece_emzirme")?15:10;
-       el("w_"+k).classList.toggle("bad",v<0||v>mx);}});
-   e.addEventListener("change",function(){D[key]=e.value;dirty=true;});
- });
 }
 async function open2(t,isNew){
  view="task";task=t;D={};dirty=false;busy=false;
@@ -461,18 +589,30 @@ async function open2(t,isNew){
  if(!isNew&&id){try{var s=await REC(id).get();D=s.exists?s.data():{};}catch(e){D={};}}
  var lockNote=LOCKED?"<div class='lockbox'>🔒 Kayıt kapalı — salt-okunur.</div>":"";
  if(t==="a"){
-  app.innerHTML=lockNote+"<div class='banner'>Yalnızca çalışma kimliği kullanın. <b>Cihaz takma</b> anı kaydı açar; "+
-   "<b>onam</b> E olmadan 24/48. saat girişleri kilitli kalır.</div>"+
-   "<div class='card'><div class='in'>"+A.map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>";
+  var panelsA=A_SECTIONS.map(function(s){return {t:s.t, body:"<div class='card'><div class='in'>"+
+    s.f.map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>"};});
+  app.innerHTML=lockNote+"<div class='banner'>Bölümler arasında üstteki sekmelerle gezinin. Kutulara <b>dokunarak</b> seçin. "+
+   "<b>Cihaz takma</b> anı kaydı açar; <b>onam</b> E olmadan 24/48. saat kilitli kalır. Yalnızca * alanlar zorunludur.</div>"+
+   renderTabs("a",panelsA);
   bind(A);
-  if(!isNew&&id)el("x_study_id").readOnly=true;
+  TABCTX={scope:"a",sections:A_SECTIONS};
+  if(isNew){ el("x_study_id").value=nextId(); D.study_id=el("x_study_id").value; }
+  else if(id){ el("x_study_id").readOnly=true;
+    document.querySelectorAll("#w_study_id .idstep").forEach(function(b){b.disabled=true;}); }
+  refreshTabs("a",A_SECTIONS);
  }else{
-  app.innerHTML=lockNote+scaleHTML(t,D[t+"q"],D[t+"r"],
-    {din:D[t+"_nrs_din"],har:D[t+"_nrs_har"],emz:D[t+"_gece_emzirme"],room:t==="b24"})+
-   (t==="b48"?"<div class='card'><h2>Kapanış</h2><div class='in'>"+
-     C.map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>":"");
+  var scaleCaveat="<div class='banner'><b>Taslak ölçek metni.</b> Sahada kullanmadan önce resmî valide "+
+   "ObsQoR-11T/RCSQ ile doğrulayın (Hastalar › Anket metni). Toplam <b>ham</b> puandır; resmî puanlama/ters kodlama uygulanmalıdır.</div>";
+  var panels=[{t:"ObsQoR-11T",body:obsqorCard(t,D[t+"q"])},
+              {t:"RCSQ",body:rcsqCard(t,D[t+"r"])},
+              {t:"Ağrı & gece",body:agriCard(t)}];
+  if(t==="b48")C_SECTIONS.forEach(function(s){panels.push({t:s.t,body:"<div class='card'><div class='in'>"+
+    s.f.map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>"});});
+  app.innerHTML=lockNote+scaleCaveat+renderTabs(t,panels);
   bindScale(t,t);
+  bind(agriDefs(t));
   if(t==="b48")bind(C);
+  TABCTX=null;
  }
  if(LOCKED){ bar.innerHTML="<button class='btn' onclick='open_(id)'>Geri</button>"; }
  else bar.innerHTML="<button class='btn sec' onclick='goBack()'>Vazgeç</button>"+
@@ -485,13 +625,14 @@ async function openMetin(){
  app.innerHTML="<div class='empty'><span class='spin'></span> Yükleniyor…</div>";
  bar.innerHTML="<button class='btn sec' onclick='renderListe()'>Vazgeç</button><button class='btn' disabled>Kaydet</button>";
  await loadMet();
- D={q:(MET.q||[]).slice(),r:(MET.r||[]).slice()};
- var h="<div class='banner'>Resmî <b>valide Türkçe</b> madde metinlerini buraya bir kez yapıştırın. "+
-  "Kaynaklar: ObsQoR-11T için Ozkan ve ark. (2022, açık erişim), RCSQ için Türkçe geçerlilik çalışması (2015). "+
-  "Kendi ifadenizle yeniden yazmayın &mdash; ölçek o zaman valide olmaktan çıkar.</div>";
+ D={q:(MET.q&&MET.q.length?MET.q:OBS_DRAFT).slice(),
+    r:(MET.r&&MET.r.length?MET.r:RCSQ_DRAFT).slice()};
+ var h="<div class='banner'>Aşağıda <b>taslak</b> metin dolu geldi. Bunları resmî <b>valide Türkçe</b> madde "+
+  "metinleriyle karşılaştırıp düzeltin ve <b>Kaydet</b> deyin. Kaynaklar: ObsQoR-11T için Ozkan ve ark. (2022, açık erişim), "+
+  "RCSQ için Türkçe geçerlilik çalışması (2015). Kendi ifadenizle yeniden yazmayın &mdash; ölçek o zaman valide olmaktan çıkar.</div>";
  h+="<div class='card'><h2>ObsQoR-11T &mdash; 11 madde</h2><div class='in'>";
  for(var i=1;i<=11;i++)h+="<div class='f'><label for='m_q"+i+"'>Madde "+i+"</label>"+
-   "<input id='m_q"+i+"' type='text' value='"+esc((D.q[i-1]||""))+"' placeholder='Resmî madde metni'></div>";
+   "<input id='m_q"+i+"' type='text' value='"+esc((D.q[i-1]||""))+"' placeholder='"+esc(OBS_DRAFT[i-1]||"Resmî madde metni")+"'></div>";
  h+="</div></div><div class='card'><h2>RCSQ &mdash; 6 madde</h2><div class='in'>";
  for(var j=0;j<6;j++)h+="<div class='f'><label for='m_r"+j+"'>Madde "+(j+1)+
    (j===5?" (gürültü &mdash; toplama dahil değil)":"")+"</label>"+
@@ -573,7 +714,7 @@ function exportAll(){
    keys.push(t+"_obsqor_toplam");
    for(var j=1;j<=6;j++)keys.push(t+"_rcsq_m"+j);
    keys.push(t+"_rcsq_toplam",t+"_nrs_din",t+"_nrs_har",t+"_gece_emzirme",t+"_sedatif");});
- keys.push("rooming","obsqor_delta","durum","acan","acilis","kapatan","kapanis","son_giren","son_guncelleme");
+ keys.push("obsqor_delta","durum","acan","acilis","kapatan","kapanis","son_giren","son_guncelleme");
  var sum=function(a){var v=(a||[]).filter(function(x){return x!==""&&x!=null;});
    return v.length===11?v.reduce(function(x,y){return x+ +y;},0):"";};
  var av5=function(a){var v=(a||[]).slice(0,5).filter(function(x){return x!==""&&x!=null;});
