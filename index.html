@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Otonom CS — Veri Girişi</title>
+<style>
+:root{
+  --ink:#14343d;--deep:#1b4f5c;--teal:#2a7a87;--mint:#e8f2f3;--paper:#f4f7f7;
+  --white:#fff;--line:#d7e1e3;--line2:#edf1f1;--amber:#c8781f;--amber-bg:#fdf3e6;
+  --red:#a8322c;--red-bg:#fbeceb;--green:#2f7d5d;--muted:#69797e;--text:#1b2a2f;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--text);font-size:16px;line-height:1.5;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+button{font-family:inherit;font-size:15px;cursor:pointer;border:0}
+input,select{font-family:inherit;font-size:16px}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.hide{display:none!important}
+header{background:var(--ink);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:11px}
+header .back{background:#23505c;color:#cfe3e6;width:38px;height:38px;border-radius:9px;font-size:19px;flex:none}
+header .ttl{flex:1;min-width:0}
+header .eyebrow{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#8fb3b9}
+header h1{font-family:var(--serif);font-size:16px;margin:1px 0 0;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-radius:8px;
+  padding:6px 9px;font-size:12px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrap{padding:16px;max-width:700px;margin:0 auto}
+.banner{background:var(--amber-bg);border-left:4px solid var(--amber);padding:11px 13px;
+  border-radius:0 8px 8px 0;font-size:13px;color:#6b4718;margin-bottom:14px}
+.banner.err{background:var(--red-bg);border-color:var(--red);color:#7d2723}
+.banner.ok{background:#eaf5ef;border-color:var(--green);color:#215c42}
+.card{background:var(--white);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.card>h2{margin:0;font-family:var(--serif);font-size:15px;color:var(--deep);
+  padding:12px 15px;border-bottom:1px solid var(--line2)}
+.card .in{padding:14px 15px}
+.plist{display:flex;flex-direction:column;gap:10px}
+.pcard{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:13px 14px;
+  display:flex;flex-direction:column;gap:9px;cursor:pointer}
+.pcard:active{background:var(--mint)}
+.prow{display:flex;align-items:center;gap:9px}
+.pid{font-family:var(--mono);font-weight:700;font-size:16px;color:var(--deep)}
+.ptag{font-size:11px;background:var(--mint);color:var(--deep);padding:3px 8px;border-radius:20px}
+.ptag.ok{background:var(--green);color:#fff}
+.ptag.warn{background:var(--amber);color:#fff}
+.ptag.lock{background:var(--ink);color:#cfe3e6}
+.pmeta{margin-left:auto;font-size:11px;color:var(--muted);text-align:right}
+.steps{display:flex;gap:6px}
+.step{flex:1;height:6px;border-radius:3px;background:var(--line2)}
+.step.on{background:var(--teal)}
+.steplab{display:flex;gap:6px;font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+.steplab span{flex:1;text-align:center}
+.tasks{display:flex;flex-direction:column;gap:10px}
+.task{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:15px 14px;
+  text-align:left;display:flex;align-items:center;gap:13px;color:var(--text);width:100%}
+.task:active{background:var(--mint)}
+.task[disabled]{opacity:.5}
+.task .n{width:36px;height:36px;border-radius:50%;background:var(--mint);color:var(--deep);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;flex:none}
+.task.done .n{background:var(--green);color:#fff}
+.task .tx{flex:1}
+.task .tt{font-weight:650;font-size:15px;color:var(--deep)}
+.task .ts{font-size:12.5px;color:var(--muted)}
+.task .ar{color:var(--muted);font-size:20px}
+.f{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.f label{font-size:13px;color:var(--muted);font-weight:650}
+.f label .req{color:var(--amber)}
+.f input,.f select{border:1px solid var(--line);border-radius:9px;padding:11px 12px;
+  background:var(--white);width:100%;min-height:46px}
+.f input:focus,.f select:focus{border-color:var(--teal)}
+.f input[inputmode],.f input[data-mono]{font-family:var(--mono)}
+.f .hint{font-size:11.5px;color:var(--muted)}
+.f.bad input,.f.bad select{border-color:var(--red);background:var(--red-bg)}
+.f .err{font-size:12px;color:var(--red);display:none}
+.f.bad .err{display:block}
+.f.calc input{background:var(--mint);font-weight:700;color:var(--deep)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.q{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line2)}
+.q .lb{flex:1;font-size:14.5px}
+.q input{width:74px;min-height:46px;text-align:center;font-family:var(--mono);font-size:17px;
+  border:1px solid var(--line);border-radius:9px}
+.vas{padding:11px 0;border-bottom:1px solid var(--line2)}
+.vas .top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.vas .lb{flex:1;font-size:14.5px}
+.vas .val{font-family:var(--mono);font-weight:700;font-size:17px;color:var(--deep);min-width:44px;text-align:right}
+.vas input[type=range]{width:100%;accent-color:var(--teal);height:34px}
+.vas .ends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.total{display:flex;justify-content:space-between;align-items:center;margin-top:13px;
+  padding:12px 15px;background:var(--deep);color:#fff;border-radius:10px;font-size:14px}
+.total b{font-family:var(--mono);font-size:20px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--white);border-top:1px solid var(--line);
+  padding:11px 16px calc(11px + env(safe-area-inset-bottom));display:flex;gap:10px;z-index:50}
+.btn{flex:1;background:var(--deep);color:#fff;padding:14px;border-radius:10px;font-weight:650;min-height:50px}
+.btn:active{background:var(--teal)}
+.btn.sec{background:var(--white);color:var(--deep);border:1px solid var(--line);flex:0 0 auto;padding:14px 17px}
+.btn.warn{background:var(--amber)}
+.btn.danger{background:var(--red)}
+.btn[disabled]{opacity:.5}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:var(--ink);color:#fff;padding:12px 20px;border-radius:9px;font-size:14px;opacity:0;
+  pointer-events:none;transition:opacity .25s;z-index:70;max-width:88vw;text-align:center}
+.toast.show{opacity:1}.toast.warn{background:var(--red)}
+.empty{text-align:center;padding:30px 16px;color:var(--muted);font-size:14px;
+  border:1px dashed var(--line);border-radius:12px;background:var(--white)}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line);
+  border-top-color:var(--teal);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* Giriş ekranı */
+#login{position:fixed;inset:0;background:var(--paper);z-index:100;display:flex;
+  align-items:center;justify-content:center;padding:24px}
+#login .box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px 22px;
+  width:100%;max-width:360px;box-shadow:0 10px 40px rgba(20,52,61,.08)}
+#login .eyebrow{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);text-align:center}
+#login h1{font-family:var(--serif);font-size:20px;color:var(--deep);text-align:center;margin:4px 0 18px}
+#login .st{background:#eaf5ef;color:#215c42;text-align:center;font-size:12.5px;padding:8px;border-radius:8px;margin-bottom:14px}
+.logrow{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.logrow label{font-size:12.5px;color:var(--muted);font-weight:650}
+.logrow input{border:1px solid var(--line);border-radius:9px;padding:12px;min-height:48px;width:100%}
+#login .lbtn{width:100%;background:var(--deep);color:#fff;padding:14px;border-radius:10px;font-weight:650;min-height:50px;margin-top:4px}
+#login .err{color:var(--red);font-size:13px;text-align:center;min-height:18px;margin-top:8px}
+.state{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.lockbox{background:var(--ink);color:#cfe3e6;border-radius:10px;padding:11px 13px;font-size:13px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- ============ GİRİŞ EKRANI ============ -->
+<div id="login">
+  <div class="box">
+    <div class="eyebrow">Otonom CS</div>
+    <h1>Veri Girişi</h1>
+    <div class="st" id="loginState"><span class="spin"></span> Bağlanıyor…</div>
+    <div class="logrow"><label for="lmail">E-posta</label>
+      <input id="lmail" type="email" autocomplete="username" inputmode="email" placeholder="ad@kurum.edu.tr"></div>
+    <div class="logrow"><label for="lpass">Parola</label>
+      <input id="lpass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="lbtn" id="lbtn" onclick="doLogin()">Giriş yap</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<header class="hide" id="hdr">
+  <button class="back hide" id="backBtn" onclick="goBack()" aria-label="Geri">‹</button>
+  <div class="ttl"><div class="eyebrow">Otonom CS</div><h1 id="hTitle">Hastalar</h1></div>
+  <span class="who" id="whoLbl"></span>
+</header>
+<div class="wrap hide" id="app"></div>
+<div class="bar hide" id="bar"></div>
+<div class="toast" id="toast"></div>
+
+<!-- Firebase (compat SDK — klasik script, inline onclick ile uyumlu) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   YAPILANDIRMA — Firebase konsolundan alıp aşağıyı doldurun (bkz. KURULUM.md)
+   apiKey herkese açık olabilir; güvenlik Firestore kuralları + giriş ile sağlanır.
+   ═══════════════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+    apiKey: "AIzaSyAF9GzX4mfhBohyYOJ-0J2KJUkdpGt50uY",
+    authDomain: "otonom-f3f75.firebaseapp.com",
+    projectId: "otonom-f3f75",
+    storageBucket: "otonom-f3f75.firebasestorage.app",
+    messagingSenderId: "135335956962",
+    appId: "1:135335956962:web:265b415a2b0cd97adde9bb",
+    measurementId: "G-TSFMK34374"
+};
+// Kaydı "yeniden açma"/silme yetkisi olan yönetici(ler). Sorumlu araştırmacının e-postası:
+const ADMIN_EMAILS = ["egehanbilen@gmail.com"];/* ═══════════════════════════════════════════════════════════════════════ */
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+const TS = ()=>firebase.firestore.FieldValue.serverTimestamp();
+const AU = v=>firebase.firestore.FieldValue.arrayUnion(v);
+const REC = i=>db.collection("records").doc(i);
+const CFG = ()=>db.collection("config").doc("olcek");
+
+/* ── kimlik ── */
+function meMail(){return (auth.currentUser&&auth.currentUser.email)||"";}
+function who(){var u=auth.currentUser;return u?((u.displayName||u.email||"").trim()):"";}
+function isAdmin(){return ADMIN_EMAILS.map(function(s){return s.toLowerCase();}).indexOf(meMail().toLowerCase())>=0;}
+
+async function doLogin(){
+ var e=el("lmail").value.trim(), p=el("lpass").value, er=el("loginErr");
+ er.textContent="";
+ if(!e||!p){er.textContent="E-posta ve parola gerekli.";return;}
+ var b=el("lbtn");b.disabled=true;b.innerHTML="<span class='spin'></span> Giriş yapılıyor…";
+ try{ await auth.signInWithEmailAndPassword(e,p); }
+ catch(x){
+   var m={"auth/invalid-credential":"E-posta veya parola hatalı.",
+          "auth/invalid-email":"Geçersiz e-posta.",
+          "auth/user-disabled":"Bu hesap devre dışı.",
+          "auth/too-many-requests":"Çok fazla deneme. Biraz bekleyin."};
+   er.textContent=m[x.code]||("Giriş başarısız: "+(x.code||x.message));
+ } finally { b.disabled=false; b.textContent="Giriş yap"; }
+}
+function logout(){ if(confirm("Çıkış yapılsın mı?")) auth.signOut(); }
+
+/* ── form tanımları ── */
+const EH=["","E","H"];
+const A=[
+ ["study_id","Çalışma ID","text",{req:1,mono:1,ph:"CS-001"}],
+ ["cs_tipi","Sezaryen","select",{req:1,opt:["","Elektif","Acil"]}],
+ ["cerrahi_bitis","Cerrahi bitiş","datetime-local",{req:1,hint:"Postop saat 0 kabul edilir"}],
+ ["cihaz_no","Cihaz no","select",{req:1,opt:["","1","2","3"]}],
+ ["takma","Cihaz takma","datetime-local",{req:1,hint:"Kayıt bu anda AÇILIR · Fitrockr eşleştirmesi için gerekli"}],
+ ["onam","Bilgilendirilmiş onam alındı","select",{req:1,opt:EH,hint:"Yazılı onam alınmadan veri girişine geçilemez"}],
+ ["yas","Yaş","num",{min:15,max:55}],
+ ["boy_cm","Boy (cm)","num",{min:130,max:200}],
+ ["kilo_kg","Kilo (kg)","num",{min:35,max:180,step:.1}],
+ ["bmi","BMI","calc",{}],
+ ["gebelik_haftasi","Gebelik haftası","num",{min:24,max:43,step:.1}],
+ ["para","Para","num",{min:0,max:12}],
+ ["anestezi","Anestezi","select",{opt:["","Spinal","Genel"]}],
+ ["it_morfin","İntratekal morfin","select",{opt:EH,hint:"Ağrı ve uykuyu güçlü etkiler"}]
+];
+const C=[
+ ["cikarma","Cihaz çıkarma","datetime-local",{req:1,hint:"Bu değer girilip kayıt kapatılınca izlem biter"}],
+ ["wear","Takı süresi (saat)","calc",{}],
+ ["opioid_doz","Kurtarma opioid dozu (adet)","num",{min:0,max:20,hint:"Dozları saymak yeterli; mg çevirmeye gerek yok"}],
+ ["hb_post","Postop Hb (g/dL)","num",{min:4,max:18,step:.1}],
+ ["bebek_yybu","Bebek YYBÜ'de","select",{opt:EH}],
+ ["komplikasyon","Komplikasyon (varsa)","text",{ph:"Yok"}],
+ ["dahil","Analize dahil","select",{req:1,opt:EH}],
+ ["not","Not","text",{}]
+];
+const RC_VARSAYILAN=["1. Uyku derinliği","2. Uykuya dalma süresi","3. Uyanma sıklığı",
+ "4. Uyanık kalınan süre","5. Uyku kalitesi","6. Ortam gürültüsü (toplama dahil değil)"];
+const A_KEYS=A.map(function(f){return f[0];});
+const C_KEYS=C.map(function(f){return f[0];});
+const TASK_KEYS={
+ a:  A_KEYS.concat([]),
+ b24:["b24q","b24r","b24_nrs_din","b24_nrs_har","b24_gece_emzirme","b24_sedatif","rooming"],
+ b48:C_KEYS.concat(["b48q","b48r","b48_nrs_din","b48_nrs_har","b48_gece_emzirme","b48_sedatif"])
+};
+
+let MET={q:[],r:[]};
+let RECS={};            // study_id -> doc verisi (canlı)
+let id=null,task=null,D={},dirty=false,busy=false,view="login",LOCKED=false;
+let unsubList=null;
+
+const qMet=i=>(MET.q&&MET.q[i-1])?MET.q[i-1]:("Madde "+i);
+const rMet=x=>(MET.r&&MET.r[x])?MET.r[x]:RC_VARSAYILAN[x];
+const metVar=()=>!!(MET.q&&MET.q.filter(function(v){return v&&v.trim();}).length===11);
+const el=i=>document.getElementById(i),app=el("app"),bar=el("bar");
+let tT;const toast=(m,w)=>{const t=el("toast");t.textContent=m;t.className="toast show"+(w?" warn":"");
+ clearTimeout(tT);tT=setTimeout(()=>t.className="toast",2800);};
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const head=(t,b)=>{el("hTitle").textContent=t;el("backBtn").classList.toggle("hide",!b);};
+const pick=(o,ks)=>{var r={};ks.forEach(function(k){if(o[k]!==undefined)r[k]=o[k];});return r;};
+function tsStr(v){try{return v&&v.toDate?v.toDate().toISOString():(v||"");}catch(e){return "";}}
+
+/* ── durum ── */
+function statusOf(r){ if(!r)return"yok"; if(r._kapali)return"kapali";
+ if(r.onam==="E"||(r._onam&&r._onam.alindi))return"aktif"; return"acik"; }
+const STAT_LBL={acik:"AÇIK",aktif:"AKTİF",kapali:"KAPALI"};
+
+/* ── alan bileşenleri ── */
+function fh(k,l,t,o){o=o||{};
+ const r=o.req?" <span class='req'>*</span>":"";let i;
+ if(t==="select")i="<select id='x_"+k+"' data-k='"+k+"'>"+(o.opt||[]).map(v=>
+   "<option value='"+esc(v)+"'>"+(v===""?"—":esc(v))+"</option>").join("")+"</select>";
+ else if(t==="calc")i="<input id='x_"+k+"' data-k='"+k+"' readonly>";
+ else{const n=t==="num";
+   i="<input id='x_"+k+"' data-k='"+k+"' type='"+(n?"number":t)+"'"+(n?" inputmode='decimal'":"")+
+   (o.mono?" data-mono='1'":"")+(o.min!=null?" min='"+o.min+"'":"")+(o.max!=null?" max='"+o.max+"'":"")+
+   (o.step?" step='"+o.step+"'":"")+(o.ph?" placeholder='"+esc(o.ph)+"'":"")+">";}
+ return "<div class='f"+(t==="calc"?" calc":"")+"' id='w_"+k+"'><label for='x_"+k+"'>"+esc(l)+r+"</label>"+i+
+   (o.hint?"<div class='hint'>"+esc(o.hint)+"</div>":"")+"<div class='err'>Aralık dışı değer</div></div>";}
+function bind(defs){defs.forEach(f=>{const k=f[0],t=f[2],o=f[3]||{};const e=el("x_"+k);if(!e)return;
+ e.value=D[k]==null?"":D[k];
+ if(LOCKED){e.disabled=true;return;}
+ e.addEventListener("input",()=>{D[k]=e.value;dirty=true;
+   if(t==="num"&&e.value!==""){const v=parseFloat(e.value);
+     el("w_"+k).classList.toggle("bad",(o.min!=null&&v<o.min)||(o.max!=null&&v>o.max));}
+   calc();});});calc();}
+function calc(){
+ if(el("x_bmi")){const b=parseFloat(D.boy_cm),k=parseFloat(D.kilo_kg);
+   el("x_bmi").value=(b&&k)?(k/Math.pow(b/100,2)).toFixed(1):"";D.bmi=el("x_bmi").value;}
+ if(el("x_wear")){const a=D.takma,b=D.cikarma;
+   el("x_wear").value=(a&&b)?(((new Date(b)-new Date(a))/3600000).toFixed(1)):"";D.wear=el("x_wear").value;}}
+
+/* ── ölçek metni ── */
+async function loadMet(){try{var s=await CFG().get();MET=s.exists?s.data():{q:[],r:[]};}catch(e){MET={q:[],r:[]};}}
+
+/* ── liste (canlı) ── */
+function startList(){
+ if(unsubList)return;
+ unsubList=db.collection("records").onSnapshot(function(snap){
+   RECS={};snap.forEach(function(d){RECS[d.id]=d.data();});
+   if(view==="list")renderListe();
+ },function(err){ if(view==="list")app.innerHTML="<div class='banner err'>Veri okunamadı: "+esc(err.code||err.message)+"</div>"; });
+}
+function renderListe(){
+ view="list";task=null;id=null;D={};dirty=false;LOCKED=false;head("Hastalar",false);
+ app.innerHTML="<div class='banner'>Yalnızca <b>çalışma kimliği</b> girin; ad, protokol no veya doğum tarihi girmeyin. "+
+  "Kayıtlar canlıdır — ekip aynı hastayı eş zamanlı düzenleyebilir.</div>"+
+  "<div id='metUyari'></div><div id='pl'></div>";
+ bar.innerHTML="<button class='btn sec' onclick='logout()'>Çıkış</button>"+
+   "<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
+   "<button class='btn sec' onclick='exportAll()'>Dışa aktar</button>"+
+   "<button class='btn' onclick='yeni()'>Yeni hasta</button>";
+ el("metUyari").innerHTML=metVar()?"":
+   "<div class='banner err'><b>Anket soruları henüz girilmedi.</b> Veri toplamaya başlamadan önce "+
+   "<b>Anket metni</b> ekranından resmî Türkçe madde metinlerini bir kez yapıştırın.</div>";
+ const ids=Object.keys(RECS).sort(),b=el("pl");
+ if(!ids.length){b.innerHTML="<div class='empty'>Henüz hasta yok.<br><b>Yeni hasta</b> ile başlayın.</div>";return;}
+ b.className="plist";
+ b.innerHTML=ids.map(function(i){var p=RECS[i]||{};var st=statusOf(p);
+  var done=p._a&&p._b24&&p._b48&&st==="kapali";
+  var tag=st==="kapali"?"<span class='ptag lock'>kapalı</span>":
+          st==="aktif"?"<span class='ptag'>aktif</span>":"<span class='ptag warn'>açık</span>";
+  return "<div class='pcard' onclick=\"open_('"+esc(i)+"')\">"+
+   "<div class='prow'><span class='pid'>"+esc(i)+"</span>"+
+   (p._tip?"<span class='ptag'>"+esc(p._tip)+"</span>":"")+tag+
+   (done?"<span class='ptag ok'>tamam</span>":"")+
+   "<span class='pmeta'>"+esc(p._son_giren||"")+"</span></div>"+
+   "<div class='steps'><i class='step"+(p._a?" on":"")+"'></i><i class='step"+(p._b24?" on":"")+
+   "'></i><i class='step"+(p._b48?" on":"")+"'></i></div>"+
+   "<div class='steplab'><span>başlangıç</span><span>24. saat</span><span>48. saat</span></div></div>";
+ }).join("");
+}
+function yeni(){id=null;D={};open2("a",true);}
+
+async function open_(i){
+ view="patient";id=i;task=null;D={};dirty=false;head(i,true);
+ var p=RECS[i]||{};var st=statusOf(p);LOCKED=(st==="kapali");
+ var consent=(p.onam==="E"||(p._onam&&p._onam.alindi));
+ var badge="<span class='ptag "+(st==="kapali"?"lock":st==="aktif"?"":"warn")+"'>"+STAT_LBL[st]+"</span>";
+ var stateHTML="<div class='state'>"+badge+
+   (consent?"<span class='ptag ok'>onam ✓</span>":"<span class='ptag warn'>onam yok</span>")+
+   (p.cihaz_no?"<span class='ptag'>cihaz "+esc(p.cihaz_no)+"</span>":"")+"</div>";
+ var lockHTML=LOCKED?"<div class='lockbox'>🔒 Bu kayıt <b>kapalı</b> (izlem bitti). Salt-okunur. "+
+   (isAdmin()?"Yönetici olarak düzeltmek için <b>Yeniden aç</b>.":"Düzeltme için sorumlu araştırmacıya bildirin.")+"</div>":"";
+ var T=function(n,k,tt,ts,dis){return "<button class='task"+(p["_"+k]?" done":"")+"'"+(dis?" disabled":"")+
+   " onclick=\"open2('"+k+"')\"><span class='n'>"+n+"</span><span class='tx'><span class='tt'>"+tt+
+   "</span><br><span class='ts'>"+ts+"</span></span><span class='ar'>&rsaquo;</span></button>";};
+ var gate=!consent;
+ app.innerHTML=stateHTML+lockHTML+"<div class='tasks'>"+
+  T(1,"a","Başlangıç + onam","Kaydı açar · onam · demografi · ~2 dk",false)+
+  T(2,"b24","24. saat","ObsQoR + RCSQ + ağrı · ~3 dk",gate)+
+  T(3,"b48","48. saat","ObsQoR + RCSQ + kapanış · ~4 dk",gate)+
+  "</div>"+
+  (gate?"<div class='banner'>2. ve 3. adım, <b>Başlangıç</b> adımında onam <b>E</b> olarak kaydedilene kadar kilitlidir.</div>":"")+
+  "<div class='card'><div class='in' style='font-size:13px;color:#69797e'>"+
+  "HRV ve uyku verileri Fitrockr'dan dosya olarak alınır, elle girilmez. Eşleştirme; çalışma kimliği, "+
+  "cihaz no ve takma/çıkarma zamanı üzerinden yapılır.</div></div>";
+ var actions="<button class='btn sec' onclick='renderListe()'>Hastalar</button>";
+ if(st!=="kapali" && p.cikarma) actions+="<button class='btn warn' onclick='kapat()'>Kaydı kapat 🔒</button>";
+ if(st==="kapali" && isAdmin()) actions+="<button class='btn danger' onclick='yenidenAc()'>Yeniden aç</button>";
+ bar.innerHTML=actions;
+}
+
+/* ── kayıt kapat / yeniden aç ── */
+async function kapat(){
+ var p=RECS[id]||{};
+ if(!p.cikarma){toast("Önce 48. saat adımında cihaz çıkarma zamanını girin",1);return;}
+ if(!confirm(id+" kaydı KAPATILSIN mı? Kapanınca kayıt kilitlenir ve veri sete dahil olur."))return;
+ try{
+   await REC(id).set({_kapali:true,_kapanis:TS(),_kapatan:who(),
+     _son_giren:who(),_son_guncelleme:TS(),_log:AU({t:new Date().toISOString(),by:who(),ev:"kapat"})},{merge:true});
+   toast("Kayıt kapatıldı 🔒");
+   var d=await REC(id).get();RECS[id]=d.data();open_(id);
+ }catch(e){toast("Kapatılamadı: "+(e.code||e.message),1);}
+}
+async function yenidenAc(){
+ if(!isAdmin()){toast("Yalnızca sorumlu araştırmacı yeniden açabilir",1);return;}
+ if(!confirm(id+" kaydı yeniden AÇILSIN mı? (düzeltme için)"))return;
+ try{
+   await REC(id).set({_kapali:false,_yeniden_acan:who(),_yeniden_acilis:TS(),
+     _son_giren:who(),_son_guncelleme:TS(),_log:AU({t:new Date().toISOString(),by:who(),ev:"yeniden-ac"})},{merge:true});
+   toast("Kayıt yeniden açıldı");
+   var d=await REC(id).get();RECS[id]=d.data();open_(id);
+ }catch(e){toast("Açılamadı: "+(e.code||e.message),1);}
+}
+
+/* ── ölçek formu ── */
+function scaleHTML(pre,qv,rv,n){
+ let h="<div class='card'><h2>ObsQoR-11T</h2><div class='in' id='"+pre+"q'>";
+ for(let i=1;i<=11;i++)h+="<div class='q'><span class='lb'>"+esc(qMet(i))+"</span>"+
+   "<input type='number' inputmode='numeric' min='0' max='10' data-i='"+i+"' value='"+
+   esc((qv||[])[i-1]==null?"":(qv||[])[i-1])+"'></div>";
+ h+="<div class='total'><span>Toplam (0&ndash;110)</span><b id='"+pre+"qt'>&mdash;</b></div></div></div>";
+ h+="<div class='card'><h2>RCSQ &mdash; dün geceki uyku</h2><div class='in' id='"+pre+"r'>";
+ RC_VARSAYILAN.forEach(function(_,x){var v=(rv||[])[x];
+  h+="<div class='vas'><div class='top'><span class='lb'>"+esc(rMet(x))+"</span>"+
+   "<span class='val' id='"+pre+"v"+x+"'>"+(v!=null&&v!==""?esc(v):"&mdash;")+"</span></div>"+
+   "<input type='range' min='0' max='100' data-i='"+x+"' value='"+(v!=null&&v!==""?esc(v):50)+
+   "' data-t='"+(v!=null&&v!==""?1:0)+"'>"+
+   "<div class='ends'><span>0 &middot; en kötü</span><span>100 &middot; en iyi</span></div></div>";});
+ h+="<div class='total'><span>RCSQ toplam (ilk 5 ort.)</span><b id='"+pre+"rt'>&mdash;</b></div></div></div>";
+ h+="<div class='card'><h2>Ağrı ve gece</h2><div class='in'><div class='two'>"+
+  "<div class='f' id='w_nrs_din'><label for='x_nrs_din'>NRS dinlenim (0&ndash;10)</label>"+
+  "<input id='x_nrs_din' type='number' inputmode='numeric' min='0' max='10' value='"+esc(n.din==null?"":n.din)+
+  "'><div class='err'>Aralık dışı</div></div>"+
+  "<div class='f' id='w_nrs_har'><label for='x_nrs_har'>NRS hareket (0&ndash;10)</label>"+
+  "<input id='x_nrs_har' type='number' inputmode='numeric' min='0' max='10' value='"+esc(n.har==null?"":n.har)+
+  "'><div class='err'>Aralık dışı</div></div></div>"+
+  "<div class='two'>"+
+  "<div class='f' id='w_gece_emzirme'><label for='x_gece_emzirme'>Gece emzirme sayısı</label>"+
+  "<input id='x_gece_emzirme' type='number' inputmode='numeric' min='0' max='15' value='"+
+  esc(n.emz==null?"":n.emz)+"'><div class='hint'>Uyku parçalanmasının başlıca nedeni</div>"+
+  "<div class='err'>Aralık dışı</div></div>"+
+  "<div class='f' id='w_sedatif'><label for='x_sedatif'>Gece sedatif / uyku ilacı</label>"+
+  "<select id='x_sedatif'><option value=''>&mdash;</option><option>E</option><option>H</option></select>"+
+  "<div class='hint'>Uyku ve HRV ölçümünü doğrudan değiştirir</div></div></div>"+
+  (n.room?"<div class='f' id='w_rooming'><label for='x_rooming'>Bebek anne yanında</label>"+
+  "<select id='x_rooming'><option value=''>&mdash;</option><option>E</option><option>H</option></select></div>":"")+
+  "</div></div>";
+ return h;
+}
+function bindScale(pre,tag){
+ var qb=el(pre+"q"),rb=el(pre+"r");
+ D[tag+"q"]=D[tag+"q"]||[];D[tag+"r"]=D[tag+"r"]||[];
+ var uq=function(){var s=0,n=0;qb.querySelectorAll("input").forEach(function(i){
+   if(i.value!==""){s+=parseFloat(i.value)||0;n++;}});
+   el(pre+"qt").textContent=n===11?s:(n?n+"/11 madde":"—");};
+ var ur=function(){var s=0,n=0;rb.querySelectorAll("input").forEach(function(i){
+   if(+i.dataset.i<5&&i.dataset.t==="1"){s+=parseFloat(i.value);n++;}});
+   el(pre+"rt").textContent=n===5?(s/5).toFixed(1):(n?n+"/5 madde":"—");};
+ if(LOCKED){
+   qb.querySelectorAll("input").forEach(function(i){i.disabled=true;});
+   rb.querySelectorAll("input").forEach(function(i){i.disabled=true;});
+   ["nrs_din","nrs_har","gece_emzirme","sedatif","rooming"].forEach(function(k){var e=el("x_"+k);if(e)e.disabled=true;});
+   uq();ur();return;
+ }
+ qb.querySelectorAll("input").forEach(function(i){i.addEventListener("input",function(){
+   D[tag+"q"][+i.dataset.i-1]=i.value;dirty=true;uq();});});uq();
+ rb.querySelectorAll("input").forEach(function(i){i.addEventListener("input",function(){
+   i.dataset.t="1";el(pre+"v"+i.dataset.i).textContent=i.value;
+   D[tag+"r"][+i.dataset.i]=i.value;dirty=true;ur();});});ur();
+ ["nrs_din","nrs_har","gece_emzirme","sedatif","rooming"].forEach(function(k){
+   var e=el("x_"+k);if(!e)return;
+   var key=(k==="rooming")?"rooming":(tag+"_"+k);
+   e.value=D[key]==null?"":D[key];
+   e.addEventListener("input",function(){D[key]=e.value;dirty=true;
+     if(e.type==="number"&&e.value!==""){var v=+e.value,mx=(k==="gece_emzirme")?15:10;
+       el("w_"+k).classList.toggle("bad",v<0||v>mx);}});
+   e.addEventListener("change",function(){D[key]=e.value;dirty=true;});
+ });
+}
+async function open2(t,isNew){
+ view="task";task=t;D={};dirty=false;busy=false;
+ var p=isNew?{}:(RECS[id]||{});
+ LOCKED=(!isNew&&statusOf(p)==="kapali");
+ // onam kapısı
+ if(!isNew&&(t==="b24"||t==="b48")&&!(p.onam==="E"||(p._onam&&p._onam.alindi))){
+   toast("Önce Başlangıç adımında onam E olarak kaydedilmeli",1);return open_(id);}
+ head({a:"Başlangıç",b24:"24. saat",b48:"48. saat"}[t],true);
+ app.innerHTML="<div class='empty'><span class='spin'></span> Yükleniyor…</div>";
+ bar.innerHTML="<button class='btn sec' onclick='goBack()'>Vazgeç</button><button class='btn' disabled>Kaydet</button>";
+ if(!isNew&&id){try{var s=await REC(id).get();D=s.exists?s.data():{};}catch(e){D={};}}
+ var lockNote=LOCKED?"<div class='lockbox'>🔒 Kayıt kapalı — salt-okunur.</div>":"";
+ if(t==="a"){
+  app.innerHTML=lockNote+"<div class='banner'>Yalnızca çalışma kimliği kullanın. <b>Cihaz takma</b> anı kaydı açar; "+
+   "<b>onam</b> E olmadan 24/48. saat girişleri kilitli kalır.</div>"+
+   "<div class='card'><div class='in'>"+A.map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>";
+  bind(A);
+  if(!isNew&&id)el("x_study_id").readOnly=true;
+ }else{
+  app.innerHTML=lockNote+scaleHTML(t,D[t+"q"],D[t+"r"],
+    {din:D[t+"_nrs_din"],har:D[t+"_nrs_har"],emz:D[t+"_gece_emzirme"],room:t==="b24"})+
+   (t==="b48"?"<div class='card'><h2>Kapanış</h2><div class='in'>"+
+     C.map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>":"");
+  bindScale(t,t);
+  if(t==="b48")bind(C);
+ }
+ if(LOCKED){ bar.innerHTML="<button class='btn' onclick='open_(id)'>Geri</button>"; }
+ else bar.innerHTML="<button class='btn sec' onclick='goBack()'>Vazgeç</button>"+
+   "<button class='btn' id='sv' onclick='kaydet()'>Kaydet</button>";
+}
+
+/* ── anket metni ── */
+async function openMetin(){
+ view="metin";task="metin";id=null;D={};dirty=false;busy=false;head("Anket metinleri",true);
+ app.innerHTML="<div class='empty'><span class='spin'></span> Yükleniyor…</div>";
+ bar.innerHTML="<button class='btn sec' onclick='renderListe()'>Vazgeç</button><button class='btn' disabled>Kaydet</button>";
+ await loadMet();
+ D={q:(MET.q||[]).slice(),r:(MET.r||[]).slice()};
+ var h="<div class='banner'>Resmî <b>valide Türkçe</b> madde metinlerini buraya bir kez yapıştırın. "+
+  "Kaynaklar: ObsQoR-11T için Ozkan ve ark. (2022, açık erişim), RCSQ için Türkçe geçerlilik çalışması (2015). "+
+  "Kendi ifadenizle yeniden yazmayın &mdash; ölçek o zaman valide olmaktan çıkar.</div>";
+ h+="<div class='card'><h2>ObsQoR-11T &mdash; 11 madde</h2><div class='in'>";
+ for(var i=1;i<=11;i++)h+="<div class='f'><label for='m_q"+i+"'>Madde "+i+"</label>"+
+   "<input id='m_q"+i+"' type='text' value='"+esc((D.q[i-1]||""))+"' placeholder='Resmî madde metni'></div>";
+ h+="</div></div><div class='card'><h2>RCSQ &mdash; 6 madde</h2><div class='in'>";
+ for(var j=0;j<6;j++)h+="<div class='f'><label for='m_r"+j+"'>Madde "+(j+1)+
+   (j===5?" (gürültü &mdash; toplama dahil değil)":"")+"</label>"+
+   "<input id='m_r"+j+"' type='text' value='"+esc((D.r[j]||""))+"' placeholder='"+esc(RC_VARSAYILAN[j])+"'></div>";
+ h+="</div></div>";
+ app.innerHTML=h;
+ for(var a=1;a<=11;a++)(function(n){var e=el("m_q"+n);
+   e.addEventListener("input",function(){D.q[n-1]=e.value;dirty=true;});})(a);
+ for(var b=0;b<6;b++)(function(n){var e=el("m_r"+n);
+   e.addEventListener("input",function(){D.r[n]=e.value;dirty=true;});})(b);
+ bar.innerHTML="<button class='btn sec' onclick='renderListe()'>Vazgeç</button>"+
+   "<button class='btn' id='sv' onclick='kaydetMetin()'>Kaydet</button>";
+}
+async function kaydetMetin(){
+ if(busy)return;busy=true;
+ var b=el("sv");if(b){b.disabled=true;b.innerHTML="<span class='spin'></span> Kaydediliyor…";}
+ try{
+  var m={q:(D.q||[]).map(function(v){return (v||"").trim();}),
+         r:(D.r||[]).map(function(v){return (v||"").trim();})};
+  await CFG().set(m);
+  MET=m;dirty=false;toast("Anket metinleri kaydedildi");renderListe();
+ }catch(e){toast("Kaydedilemedi: "+(e.code||e.message),1);}
+ finally{busy=false;var x=el("sv");if(x){x.disabled=false;x.textContent="Kaydet";}}
+}
+function goBack(){if(dirty&&!confirm("Kaydedilmemiş değişiklikler var. Çıkılsın mı?"))return;
+ dirty=false;if(id)open_(id);else renderListe();}
+
+/* ── kaydet (Firestore + yaşam döngüsü + audit) ── */
+function full(t){return ((D[t+"q"]||[]).filter(function(v){return v!==""&&v!=null;}).length===11)&&
+  ((D[t+"r"]||[]).slice(0,5).filter(function(v){return v!==""&&v!=null;}).length===5);}
+async function kaydet(){
+ if(busy||LOCKED)return;
+ if(app.querySelector(".f.bad")){toast("Kırmızı alanları düzeltin",1);return;}
+ var need=task==="a"?["study_id","cs_tipi","cerrahi_bitis","cihaz_no","takma","onam"]:(task==="b48"?["cikarma","dahil"]:[]);
+ for(var n=0;n<need.length;n++){var k=need[n];
+  if(!D[k]){toast("Zorunlu alan eksik",1);var e=el("x_"+k);if(e){e.focus();el("w_"+k).classList.add("bad");}return;}}
+ busy=true;var b=el("sv");if(b){b.disabled=true;b.innerHTML="<span class='spin'></span> Kaydediliyor…";}
+ try{
+  var existed=true;
+  if(task==="a"){
+   var i=(D.study_id||"").trim();
+   if(/\d{6,}/.test(i)){toast("ID'de uzun sayı dizisi olmamalı (kimlik sızıntısı)",1);busy=false;var z=el("sv");if(z){z.disabled=false;z.textContent="Kaydet";}return;}
+   var ex=await REC(i).get();existed=ex.exists;
+   if(!id&&existed&&!confirm(i+" zaten var. Üzerine yazılsın mı?")){busy=false;var z2=el("sv");if(z2){z2.disabled=false;z2.textContent="Kaydet";}return;}
+   id=i;
+  }
+  var patch=pick(D,TASK_KEYS[task]);
+  patch._son_giren=who();patch._son_guncelleme=TS();
+  patch._log=AU({t:new Date().toISOString(),by:who(),ev:task});
+  if(task==="a"){
+   patch._tip=D.cs_tipi||"";patch._a=1;
+   if(!existed){patch._kapali=false;patch._acan=who();patch._acilis=TS();}
+   if(D.onam==="E")patch._onam={alindi:true,at:new Date().toISOString(),by:who()};
+  }
+  if(task==="b24")patch._b24=full("b24")?1:0;
+  if(task==="b48")patch._b48=(full("b48")&&D.cikarma&&D.dahil)?1:0;
+  await REC(id).set(patch,{merge:true});
+  var d=await REC(id).get();RECS[id]=d.data();
+  dirty=false;
+  if(task==="a"&&D.onam!=="E")toast("Kaydedildi — onam E olmadığı için 24/48. saat kilitli");
+  else toast("Kaydedildi");
+  open_(id);
+ }catch(e){toast("Kaydedilemedi: "+(e.code||e.message),1);}
+ finally{busy=false;var x=el("sv");if(x){x.disabled=false;x.textContent="Kaydet";}}
+}
+
+/* ── CSV dışa aktar ── */
+const ce=function(v){v=v==null?"":String(v);return /[",;\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+function dl(n,t){var b=new Blob(["﻿"+t],{type:"text/csv;charset=utf-8"});
+ var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=n;a.click();
+ setTimeout(function(){URL.revokeObjectURL(a.href);},1500);}
+function exportAll(){
+ var ids=Object.keys(RECS).sort();
+ if(!ids.length){toast("Dışa aktarılacak kayıt yok",1);return;}
+ var rows=ids.map(function(i){return Object.assign({study_id:i},RECS[i]||{});});
+ var keys=A_KEYS.concat(C_KEYS).filter(function(v,x,a){return a.indexOf(v)===x;});
+ ["b24","b48"].forEach(function(t){
+   for(var i=1;i<=11;i++)keys.push(t+"_obsqor_m"+i);
+   keys.push(t+"_obsqor_toplam");
+   for(var j=1;j<=6;j++)keys.push(t+"_rcsq_m"+j);
+   keys.push(t+"_rcsq_toplam",t+"_nrs_din",t+"_nrs_har",t+"_gece_emzirme",t+"_sedatif");});
+ keys.push("rooming","obsqor_delta","durum","acan","acilis","kapatan","kapanis","son_giren","son_guncelleme");
+ var sum=function(a){var v=(a||[]).filter(function(x){return x!==""&&x!=null;});
+   return v.length===11?v.reduce(function(x,y){return x+ +y;},0):"";};
+ var av5=function(a){var v=(a||[]).slice(0,5).filter(function(x){return x!==""&&x!=null;});
+   return v.length===5?(v.reduce(function(x,y){return x+ +y;},0)/5).toFixed(1):"";};
+ var csv=keys.join(";")+"\n";
+ rows.forEach(function(r){
+  var t24=sum(r.b24q),t48=sum(r.b48q);
+  csv+=keys.map(function(k){
+   var m=k.match(/^(b24|b48)_obsqor_m(\d+)$/);if(m)return ce((r[m[1]+"q"]||[])[+m[2]-1]);
+   m=k.match(/^(b24|b48)_rcsq_m(\d+)$/);if(m)return ce((r[m[1]+"r"]||[])[+m[2]-1]);
+   if(k==="b24_obsqor_toplam")return ce(t24);
+   if(k==="b48_obsqor_toplam")return ce(t48);
+   if(k==="b24_rcsq_toplam")return ce(av5(r.b24r));
+   if(k==="b48_rcsq_toplam")return ce(av5(r.b48r));
+   if(k==="obsqor_delta")return ce((t24!==""&&t48!=="")?(t48-t24):"");
+   if(k==="durum")return ce(STAT_LBL[statusOf(r)]||"");
+   if(k==="acan")return ce(r._acan);
+   if(k==="acilis")return ce(tsStr(r._acilis));
+   if(k==="kapatan")return ce(r._kapatan);
+   if(k==="kapanis")return ce(tsStr(r._kapanis));
+   if(k==="son_giren")return ce(r._son_giren);
+   if(k==="son_guncelleme")return ce(tsStr(r._son_guncelleme));
+   return ce(r[k]);
+  }).join(";")+"\n";});
+ dl("otonomCS_"+new Date().toISOString().slice(0,10)+".csv",csv);
+ toast(ids.length+" hasta · tek CSV indirildi");
+}
+window.addEventListener("beforeunload",function(e){if(dirty){e.preventDefault();e.returnValue="";}});
+
+/* ── kimlik durumu → uygulamayı başlat/kilitle ── */
+auth.onAuthStateChanged(async function(u){
+ if(u){
+   el("login").classList.add("hide");
+   ["hdr","app","bar"].forEach(function(x){el(x).classList.remove("hide");});
+   el("whoLbl").textContent=who();
+   await loadMet();
+   startList();
+   renderListe();
+ }else{
+   if(unsubList){unsubList();unsubList=null;}
+   RECS={};view="login";
+   ["hdr","app","bar"].forEach(function(x){el(x).classList.add("hide");});
+   el("login").classList.remove("hide");
+   el("loginState").innerHTML="Devam etmek için giriş yapın.";
+   el("lbtn").disabled=false;
+ }
+});
+el("lpass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
+</script>
+</body>
+</html>
