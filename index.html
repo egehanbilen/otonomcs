@@ -344,16 +344,16 @@ const OBS_ITEMS=[
  "Bebeğimi yardım olmadan emzirebiliyorum.",
  "Kişisel bakım ve temizliğimi yapabiliyorum.",
  "Kontrol altında hissediyorum."];
-// RCSQ — madde kökleri ve çapa etiketleri. Metin TASLAK çeviridir (İngilizce Richards-Campbell'dan);
-// resmî valide Türkçe sürümle (J Turk Sleep Med 2015) doğrulanmalı. Puanlama: her madde 0–100 (sol=kötü, sağ=iyi),
-// toplam = ilk 5 maddenin ortalaması (0–100, yüksek=iyi); 6. madde (gürültü) toplama dahil değildir.
+// RCSQ (Richard-Campbell Uyku Ölçeği) — RESMÎ valide Türkçe (Karaman Özlü Z, Özer N. J Turk Sleep Med 2015;2:29-32).
+// Puanlama: her madde 0–100 (sol=kötü, sağ=iyi); toplam = ilk 5 maddenin ortalaması (0–100, yüksek=iyi);
+// 6. madde (gürültü) toplama dahil değildir. Cronbach α=0,91; test-tekrar r=0,99.
 const RCSQ_DRAFT=[
  "Dün geceki uykum",
- "Dün gece ilk kez uykuya daldığımda",
- "Dün gece uyanıklığım",
- "Dün gece uyandığımda / uyandırıldığımda",
- "Dün geceki uykumu şöyle tanımlarım",
- "Ortam gürültüsü (toplama dahil değil)"];
+ "Dün gece uykuya dalışım",
+ "Dün geceki uyanıklığım",
+ "Dün gece uyandığımda tekrar uykuya dalışım",
+ "Dün geceki uyku kalitem",
+ "Dün geceki ortam gürültü düzeyi (toplama dahil değil)"];
 const RCSQ_ANCHORS=[
  ["Yüzeysel uyku","Derin uyku"],
  ["Bir türlü uyuyamadım","Hemen hemen anında uyudum"],
@@ -508,9 +508,7 @@ function renderListe(){
    "<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
    "<button class='btn sec' onclick='exportAll()'>Dışa aktar</button>"+
    "<button class='btn' onclick='yeni()'>Yeni hasta</button>";
- var rcsqOk=!!(MET.r&&MET.r.filter(function(v){return v&&(""+v).trim();}).length>=5);
- el("metUyari").innerHTML=rcsqOk?"":
-   "<div class='banner'>ObsQoR-11T resmî metin gömülü. <b>RCSQ metni taslak</b> — <b>Anket metni</b> ekranından resmî Türkçe sürümle doğrulayın.</div>";
+ el("metUyari").innerHTML="";
  const ids=Object.keys(RECS).sort(),b=el("pl");
  if(!ids.length){b.innerHTML="<div class='empty'>Henüz hasta yok.<br><b>Yeni hasta</b> ile başlayın.</div>";return;}
  b.className="plist";
@@ -694,8 +692,8 @@ async function open2(t,isNew){
     document.querySelectorAll("#w_study_id .idstep").forEach(function(b){b.disabled=true;}); }
   refreshTabs("a",A_SECTIONS);
  }else{
-  var scaleCaveat="<div class='banner'>ObsQoR-11T <b>resmî valide</b> metindir; toplam ham puandır (0–110, yüksek = iyi), ekstra ters-kodlama gerekmez. "+
-   "<b>RCSQ metni taslaktır</b> — resmî Türkçe sürümle doğrulayın (Hastalar › Anket metni).</div>";
+  var scaleCaveat="<div class='banner'>ObsQoR-11T ve RCSQ metinleri <b>resmî valide</b> Türkçedir. ObsQoR toplamı ham puandır (0–110, yüksek = iyi), ekstra ters-kodlama gerekmez. "+
+   "RCSQ toplamı ilk 5 maddenin ortalamasıdır (0–100, yüksek = iyi).</div>";
   var panels=[{t:"ObsQoR-11T",body:obsqorCard(t,D[t+"q"])},
               {t:"RCSQ",body:rcsqCard(t,D[t+"r"])},
               {t:"Ağrı & gece",body:agriCard(t)}];
@@ -725,8 +723,7 @@ async function openMetin(){
  await loadMet();
  D={q:(MET.q&&MET.q.length?MET.q:OBS_ITEMS).slice(),
     r:(MET.r&&MET.r.length?MET.r:RCSQ_DRAFT).slice()};
- var h="<div class='banner'>ObsQoR-11T maddeleri <b>resmî valide</b> metinle dolu geldi (Ozkan ve ark. 2022) — değiştirmeyin. "+
-  "RCSQ maddeleri <b>taslaktır</b>; resmî Türkçe sürümle (J Turk Sleep Med 2015) karşılaştırıp düzeltin, sonra <b>Kaydet</b>. "+
+ var h="<div class='banner'>ObsQoR-11T (Ozkan ve ark. 2022) ve RCSQ (Karaman Özlü &amp; Özer 2015) maddeleri <b>resmî valide</b> Türkçe metinle dolu gelir. "+
   "Kendi ifadenizle yeniden yazmayın &mdash; ölçek o zaman valide olmaktan çıkar.</div>";
  h+="<div class='card'><h2>ObsQoR-11T &mdash; 11 madde</h2><div class='in'>";
  for(var i=1;i<=11;i++)h+="<div class='f'><label for='m_q"+i+"'>Madde "+i+"</label>"+
