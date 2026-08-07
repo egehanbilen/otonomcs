@@ -163,6 +163,15 @@ header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-rad
 .logrow input{border:1px solid var(--line);border-radius:9px;padding:12px;min-height:48px;width:100%}
 #login .lbtn{width:100%;background:var(--deep);color:#fff;padding:14px;border-radius:10px;font-weight:650;min-height:50px;margin-top:4px}
 #login .err{color:var(--red);font-size:13px;text-align:center;min-height:18px;margin-top:8px}
+#login .revhint{font-size:11.5px;color:var(--muted);text-align:center;line-height:1.5;
+  margin-top:14px;border-top:1px solid var(--line2);padding-top:12px}
+/* canlı veri seti tablosu */
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--white);margin-bottom:12px}
+.dtbl{border-collapse:collapse;width:100%;font-size:12.5px}
+.dtbl th,.dtbl td{border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);padding:8px 10px;white-space:nowrap;text-align:left}
+.dtbl tr td:last-child,.dtbl tr th:last-child{border-right:0}
+.dtbl thead th{background:var(--mint);color:var(--deep);font-weight:700;position:sticky;top:0}
+.dtbl .idc{font-family:var(--mono);font-weight:700;color:var(--deep)}
 .state{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .lockbox{background:var(--ink);color:#cfe3e6;border-radius:10px;padding:11px 13px;font-size:13px;margin-bottom:12px}
 </style>
@@ -181,6 +190,7 @@ header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-rad
       <input id="lpass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
     <button class="lbtn" id="lbtn" onclick="doLogin()">Giriş yap</button>
     <div class="err" id="loginErr"></div>
+    <div class="revhint">Etik kurul incelemesi için: kullanıcı adı <b>etik kurul</b>, parola <b>1234</b><br>(gerçek hasta verisi görünmez; yalnızca salt-okunur örnek form).</div>
   </div>
 </div>
 
@@ -231,6 +241,8 @@ function isAdmin(){return ADMIN_EMAILS.map(function(s){return s.toLowerCase();})
 async function doLogin(){
  var e=el("lmail").value.trim(), p=el("lpass").value, er=el("loginErr");
  er.textContent="";
+ // Etik kurul inceleme hesabı — Firebase'e bağlanmaz, gerçek veri okumaz; salt-okunur örnek form
+ if(e.toLowerCase()==="etik kurul"&&p==="1234"){enterReview();return;}
  if(!e||!p){er.textContent="E-posta ve parola gerekli.";return;}
  var b=el("lbtn");b.disabled=true;b.innerHTML="<span class='spin'></span> Giriş yapılıyor…";
  try{ await auth.signInWithEmailAndPassword(e,p); }
@@ -243,6 +255,32 @@ async function doLogin(){
  } finally { b.disabled=false; b.textContent="Giriş yap"; }
 }
 function logout(){ if(confirm("Çıkış yapılsın mı?")) auth.signOut(); }
+
+/* ── etik kurul inceleme modu (salt-okunur örnek form; gerçek veri yok) ── */
+const SAMPLE_ID="ÖRNEK-01";
+const SAMPLE={study_id:SAMPLE_ID,onam:"Evet",_onam:{alindi:true},cihaz_no:"1",cs_tipi:"Elektif",_tip:"Elektif",_a:1};
+function enterReview(){
+ REVIEW=true;
+ el("login").classList.add("hide");
+ ["hdr","app","bar"].forEach(function(x){el(x).classList.remove("hide");});
+ el("whoLbl").textContent="Etik Kurul";
+ RECS={};RECS[SAMPLE_ID]=SAMPLE;   // yalnızca örnek kayıt; Firestore hiç sorgulanmaz
+ renderReviewHome();
+}
+function exitReview(){ location.reload(); }
+function renderReviewHome(){
+ view="list";task=null;id=null;D={};dirty=false;LOCKED=false;head("Etik kurul — inceleme",false);
+ app.innerHTML="<div class='banner'>🔒 <b>Etik kurul inceleme modu.</b> Bu ekran <b>salt-okunur örnek</b> formdur; "+
+  "gerçek hasta verisi görüntülenmez. Amaç, çalışmada hangi verilerin toplandığını göstermektir. "+
+  "Aşağıdaki örnek kaydı açarak Başlangıç, 24. ve 48. saat formlarını ve ObsQoR-11T / RCSQ ölçeklerini inceleyebilirsiniz. "+
+  "Ölçek madde metinleri <b>Anket metni</b> ekranından görülebilir.</div>"+
+  "<div class='plist'><div class='pcard' onclick=\"open_('"+esc(SAMPLE_ID)+"')\">"+
+  "<div class='prow'><span class='pid'>"+esc(SAMPLE_ID)+"</span><span class='ptag'>örnek</span>"+
+  "<span class='ptag ok'>salt-okunur</span></div>"+
+  "<div class='steplab'><span>başlangıç</span><span>24. saat</span><span>48. saat</span></div></div></div>";
+ bar.innerHTML="<button class='btn sec' onclick='exitReview()'>Çıkış</button>"+
+   "<button class='btn' onclick='openMetin()'>Anket metni</button>";
+}
 
 /* ── form tanımları ── */
 const EH=["","Evet","Hayır"];
@@ -371,11 +409,12 @@ const TASK_KEYS={
 
 let MET={q:[],r:[]};
 let RECS={};            // study_id -> doc verisi (canlı)
-let id=null,task=null,D={},ORIG={},dirty=false,busy=false,view="login",LOCKED=false;
+let id=null,task=null,D={},ORIG={},dirty=false,busy=false,view="login",LOCKED=false,REVIEW=false;
 let unsubList=null,TABCTX=null;
 
-const qMet=i=>(MET.q&&MET.q[i-1]&&(""+MET.q[i-1]).trim())?MET.q[i-1]:(OBS_ITEMS[i-1]||("Madde "+i));
-const rMet=x=>(MET.r&&MET.r[x]&&(""+MET.r[x]).trim())?MET.r[x]:(RCSQ_DRAFT[x]||RC_VARSAYILAN[x]);
+// Ölçek metinleri SABİT — resmî valide (ObsQoR-11T: Ozkan 2022; RCSQ: Karaman Özlü & Özer 2015). Değiştirilemez.
+const qMet=i=>(OBS_ITEMS[i-1]||("Madde "+i));
+const rMet=x=>(RCSQ_DRAFT[x]||RC_VARSAYILAN[x]);
 const metVar=()=>!!(MET.q&&MET.q.filter(function(v){return v&&v.trim();}).length===11);
 const el=i=>document.getElementById(i),app=el("app"),bar=el("bar");
 let tT;const toast=(m,w)=>{const t=el("toast");t.textContent=m;t.className="toast show"+(w?" warn":"");
@@ -497,16 +536,18 @@ function startList(){
  unsubList=db.collection("records").onSnapshot(function(snap){
    RECS={};snap.forEach(function(d){RECS[d.id]=d.data();});
    if(view==="list")renderListe();
- },function(err){ if(view==="list")app.innerHTML="<div class='banner err'>Veri okunamadı: "+esc(err.code||err.message)+"</div>"; });
+   else if(view==="veriseti")renderVeriSeti();   // canlı veri seti ekranı her snapshot'ta güncellenir
+ },function(err){ if(view==="list"||view==="veriseti")app.innerHTML="<div class='banner err'>Veri okunamadı: "+esc(err.code||err.message)+"</div>"; });
 }
 function renderListe(){
+ if(REVIEW){renderReviewHome();return;}
  view="list";task=null;id=null;D={};dirty=false;LOCKED=false;head("Hastalar",false);
  app.innerHTML="<div class='banner'>Yalnızca <b>çalışma kimliği</b> girin; ad, protokol no veya doğum tarihi girmeyin. "+
   "Kayıtlar canlıdır — ekip aynı hastayı eş zamanlı düzenleyebilir.</div>"+
   "<div id='metUyari'></div><div id='pl'></div>";
  bar.innerHTML="<button class='btn sec' onclick='logout()'>Çıkış</button>"+
    "<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
-   "<button class='btn sec' onclick='exportAll()'>Dışa aktar</button>"+
+   "<button class='btn sec' onclick='openVeriSeti()'>Veri seti</button>"+
    "<button class='btn' onclick='yeni()'>Yeni hasta</button>";
  el("metUyari").innerHTML="";
  const ids=Object.keys(RECS).sort(),b=el("pl");
@@ -528,15 +569,42 @@ function renderListe(){
 }
 function yeni(){id=null;D={};open2("a",true);}
 
+/* ── canlı veri seti (Firestore anlık; ayrı dosyaya gerek yok) ── */
+function obsSum(a){var v=(a||[]).filter(function(x){return x!==""&&x!=null;});
+ return v.length===11?v.reduce(function(x,y){return x+ +y;},0):"";}
+function openVeriSeti(){renderVeriSeti();}
+function renderVeriSeti(){
+ view="veriseti";task=null;id=null;D={};dirty=false;LOCKED=false;head("Canlı veri seti",true);
+ var info="<div class='banner ok'>☁ Tüm kayıtlar <b>Kaydet</b> anında Firebase bulutuna <b>canlı</b> yazılır — "+
+  "bu tablo her zaman günceldir (anlık değişir). Verinizin güvenli çevrimiçi kopyası zaten buluttadır; "+
+  "ayrı dosya tutmanıza gerek yok. Analiz için istediğinizde tüm alanları CSV olarak indirebilirsiniz.</div>";
+ var ids=Object.keys(RECS).sort();
+ if(!ids.length){app.innerHTML=info+"<div class='empty'>Henüz kayıt yok.</div>";
+   bar.innerHTML="<button class='btn sec' onclick='renderListe()'>Hastalar</button>";return;}
+ var cols=["ID","Durum","Onam","Cihaz","ObsQoR 24","ObsQoR 48","Δ(48-24)","Dahil","Son giren","Güncelleme"];
+ var body=ids.map(function(i){var r=RECS[i]||{};var t24=obsSum(r.b24q),t48=obsSum(r.b48q);
+  var d=(t24!==""&&t48!=="")?(t48-t24):"";
+  var cells=[i,STAT_LBL[statusOf(r)]||"",r.onam||"",r.cihaz_no||"",t24,t48,d,r.dahil||"",
+    r._son_giren||"",tsStr(r._son_guncelleme).replace("T"," ").slice(0,16)];
+  return "<tr>"+cells.map(function(c,x){return "<td"+(x===0?" class='idc'":"")+">"+esc(c)+"</td>";}).join("")+"</tr>";
+ }).join("");
+ app.innerHTML=info+"<div class='tblwrap'><table class='dtbl'><thead><tr>"+
+  cols.map(function(h){return "<th>"+esc(h)+"</th>";}).join("")+"</tr></thead><tbody>"+body+"</tbody></table></div>"+
+  "<div class='banner'>Toplam <b>"+ids.length+"</b> kayıt. Tablo özet gösterir; <b>tüm CRF alanları + ObsQoR/RCSQ maddeleri</b> CSV indirmede yer alır.</div>";
+ bar.innerHTML="<button class='btn sec' onclick='renderListe()'>Hastalar</button>"+
+   "<button class='btn' onclick='exportAll()'>CSV indir</button>";
+}
+
 async function open_(i){
  view="patient";id=i;task=null;D={};dirty=false;head(i,true);
- var p=RECS[i]||{};var st=statusOf(p);LOCKED=(st==="kapali");
+ var p=RECS[i]||{};var st=statusOf(p);LOCKED=(st==="kapali");if(REVIEW)LOCKED=true;
  var consent=(p.onam==="Evet"||(p._onam&&p._onam.alindi));
  var badge="<span class='ptag "+(st==="kapali"?"lock":st==="aktif"?"":"warn")+"'>"+STAT_LBL[st]+"</span>";
  var stateHTML="<div class='state'>"+badge+
    (consent?"<span class='ptag ok'>onam ✓</span>":"<span class='ptag warn'>onam yok</span>")+
    (p.cihaz_no?"<span class='ptag'>cihaz "+esc(p.cihaz_no)+"</span>":"")+"</div>";
- var lockHTML=LOCKED?"<div class='lockbox'>🔒 Bu kayıt <b>kapalı</b> (izlem bitti). Salt-okunur. "+
+ var lockHTML=REVIEW?"<div class='lockbox'>🔒 <b>Etik kurul inceleme modu</b> — salt-okunur örnek form. Gerçek hasta verisi değildir; hiçbir alan düzenlenemez/kaydedilemez.</div>"
+   :LOCKED?"<div class='lockbox'>🔒 Bu kayıt <b>kapalı</b> (izlem bitti). Salt-okunur. "+
    (isAdmin()?"Yönetici olarak düzeltmek için <b>Yeniden aç</b>.":"Düzeltme için sorumlu araştırmacıya bildirin.")+"</div>":"";
  var T=function(n,k,tt,ts,dis){return "<button class='task"+(p["_"+k]?" done":"")+"'"+(dis?" disabled":"")+
    " onclick=\"open2('"+k+"')\"><span class='n'>"+n+"</span><span class='tx'><span class='tt'>"+tt+
@@ -668,17 +736,19 @@ function bindScale(pre,tag){
 async function open2(t,isNew){
  view="task";task=t;D={};dirty=false;busy=false;
  var p=isNew?{}:(RECS[id]||{});
- LOCKED=(!isNew&&statusOf(p)==="kapali");
+ LOCKED=(!isNew&&statusOf(p)==="kapali");if(REVIEW)LOCKED=true;
  // onam kapısı
  if(!isNew&&(t==="b24"||t==="b48")&&!(p.onam==="Evet"||(p._onam&&p._onam.alindi))){
    toast("Önce Başlangıç adımında onam Evet olarak kaydedilmeli",1);return open_(id);}
  head({a:"Başlangıç",b24:"24. saat",b48:"48. saat"}[t],true);
  app.innerHTML="<div class='empty'><span class='spin'></span> Yükleniyor…</div>";
  bar.innerHTML="<button class='btn sec' onclick='goBack()'>Vazgeç</button><button class='btn' disabled>Kaydet</button>";
- if(!isNew&&id){try{var s=await REC(id).get();D=s.exists?s.data():{};}catch(e){D={};}}
+ if(REVIEW){D=Object.assign({},RECS[id]||{});}   // inceleme modu: Firestore sorgulanmaz, örnek veriden yüklenir
+ else if(!isNew&&id){try{var s=await REC(id).get();D=s.exists?s.data():{};}catch(e){D={};}}
  // Yükleme anındaki değerleri sakla — kayıtta yalnız gerçekten değişen alanları yazacağız (eşzamanlı veri kaybını önler)
  ORIG={};(TASK_KEYS[task]||[]).forEach(function(k){ORIG[k]=(D[k]&&typeof D[k]==="object")?JSON.parse(JSON.stringify(D[k])):D[k];});
- var lockNote=LOCKED?"<div class='lockbox'>🔒 Kayıt kapalı — salt-okunur.</div>":"";
+ var lockNote=REVIEW?"<div class='lockbox'>🔒 Etik kurul inceleme modu — salt-okunur örnek form.</div>":
+   LOCKED?"<div class='lockbox'>🔒 Kayıt kapalı — salt-okunur.</div>":"";
  if(t==="a"){
   var panelsA=A_SECTIONS.map(function(s){return {t:s.t, body:"<div class='card'><div class='in'>"+
     s.f.map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>"};});
@@ -715,42 +785,20 @@ async function open2(t,isNew){
    "<button class='btn' id='sv' onclick='kaydet()'>Kaydet</button>";
 }
 
-/* ── anket metni ── */
-async function openMetin(){
+/* ── anket metni (SALT-OKUNUR — resmî valide, değiştirilemez) ── */
+function openMetin(){
  view="metin";task="metin";id=null;D={};dirty=false;busy=false;head("Anket metinleri",true);
- app.innerHTML="<div class='empty'><span class='spin'></span> Yükleniyor…</div>";
- bar.innerHTML="<button class='btn sec' onclick='renderListe()'>Vazgeç</button><button class='btn' disabled>Kaydet</button>";
- await loadMet();
- D={q:(MET.q&&MET.q.length?MET.q:OBS_ITEMS).slice(),
-    r:(MET.r&&MET.r.length?MET.r:RCSQ_DRAFT).slice()};
- var h="<div class='banner'>ObsQoR-11T (Ozkan ve ark. 2022) ve RCSQ (Karaman Özlü &amp; Özer 2015) maddeleri <b>resmî valide</b> Türkçe metinle dolu gelir. "+
-  "Kendi ifadenizle yeniden yazmayın &mdash; ölçek o zaman valide olmaktan çıkar.</div>";
- h+="<div class='card'><h2>ObsQoR-11T &mdash; 11 madde</h2><div class='in'>";
- for(var i=1;i<=11;i++)h+="<div class='f'><label for='m_q"+i+"'>Madde "+i+"</label>"+
-   "<input id='m_q"+i+"' type='text' value='"+esc((D.q[i-1]||""))+"' placeholder='"+esc(OBS_ITEMS[i-1]||"Resmî madde metni")+"'></div>";
- h+="</div></div><div class='card'><h2>RCSQ &mdash; 6 madde</h2><div class='in'>";
- for(var j=0;j<6;j++)h+="<div class='f'><label for='m_r"+j+"'>Madde "+(j+1)+
-   (j===5?" (gürültü &mdash; toplama dahil değil)":"")+"</label>"+
-   "<input id='m_r"+j+"' type='text' value='"+esc((D.r[j]||""))+"' placeholder='"+esc(RC_VARSAYILAN[j])+"'></div>";
+ var h="<div class='banner'>ObsQoR-11T (Ozkan ve ark. 2022) ve RCSQ (Karaman Özlü &amp; Özer 2015) maddeleri "+
+  "<b>resmî valide Türkçe</b> metindir ve <b>sabittir — değiştirilemez</b>. Ölçeğin geçerliliği için metinler olduğu gibi kullanılır.</div>";
+ h+="<div class='card'><h2>ObsQoR-11T &mdash; 11 madde</h2><div class='in'>"+
+  "<div class='qnote'>Madde 1&ndash;5 ters çapalı, 6&ndash;11 düz; toplam ham 0&ndash;110 (yüksek = iyi).</div>";
+ for(var i=1;i<=11;i++)h+="<div class='q'><span class='lb'><b>"+i+".</b> "+esc(OBS_ITEMS[i-1])+"</span></div>";
+ h+="</div></div><div class='card'><h2>RCSQ &mdash; 6 madde</h2><div class='in'>"+
+  "<div class='qnote'>Her madde 0&ndash;100 (yüksek = iyi); toplam = ilk 5 maddenin ortalaması; 6. madde toplama dahil değildir.</div>";
+ for(var j=0;j<6;j++)h+="<div class='q'><span class='lb'><b>"+(j+1)+".</b> "+esc(RCSQ_DRAFT[j])+"</span></div>";
  h+="</div></div>";
  app.innerHTML=h;
- for(var a=1;a<=11;a++)(function(n){var e=el("m_q"+n);
-   e.addEventListener("input",function(){D.q[n-1]=e.value;dirty=true;});})(a);
- for(var b=0;b<6;b++)(function(n){var e=el("m_r"+n);
-   e.addEventListener("input",function(){D.r[n]=e.value;dirty=true;});})(b);
- bar.innerHTML="<button class='btn sec' onclick='renderListe()'>Vazgeç</button>"+
-   "<button class='btn' id='sv' onclick='kaydetMetin()'>Kaydet</button>";
-}
-async function kaydetMetin(){
- if(busy)return;busy=true;
- var b=el("sv");if(b){b.disabled=true;b.innerHTML="<span class='spin'></span> Kaydediliyor…";}
- try{
-  var m={q:(D.q||[]).map(function(v){return (v||"").trim();}),
-         r:(D.r||[]).map(function(v){return (v||"").trim();})};
-  await CFG().set(m);
-  MET=m;dirty=false;toast("Anket metinleri kaydedildi");renderListe();
- }catch(e){toast("Kaydedilemedi: "+(e.code||e.message),1);}
- finally{busy=false;var x=el("sv");if(x){x.disabled=false;x.textContent="Kaydet";}}
+ bar.innerHTML="<button class='btn' onclick='renderListe()'>Geri</button>";
 }
 function goBack(){if(dirty&&!confirm("Kaydedilmemiş değişiklikler var. Çıkılsın mı?"))return;
  dirty=false;if(id)open_(id);else renderListe();}
