@@ -30,6 +30,9 @@ header h1{font-family:var(--serif);font-size:16px;margin:1px 0 0;font-weight:600
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-radius:8px;
   padding:6px 9px;font-size:12px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .hbtn{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-radius:8px;
+  padding:7px 12px;font-size:13px;font-weight:650;flex:none}
+header .hbtn:active{background:#2d6472}
 .wrap{padding:16px;max-width:700px;margin:0 auto}
 .banner{background:var(--amber-bg);border-left:4px solid var(--amber);padding:11px 13px;
   border-radius:0 8px 8px 0;font-size:13px;color:#6b4718;margin-bottom:14px}
@@ -214,6 +217,7 @@ header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-rad
   <button class="back hide" id="backBtn" onclick="goBack()" aria-label="Geri">‹</button>
   <div class="ttl"><div class="eyebrow">Otonom CS</div><h1 id="hTitle">Hastalar</h1></div>
   <span class="who" id="whoLbl"></span>
+  <button class="hbtn hide" id="logoutBtn" onclick="logout()">Çıkış</button>
 </header>
 <div class="wrap hide" id="app"></div>
 <div class="bar hide" id="bar"></div>
@@ -408,7 +412,8 @@ const el=i=>document.getElementById(i),app=el("app"),bar=el("bar");
 let tT;const toast=(m,w)=>{const t=el("toast");t.textContent=m;t.className="toast show"+(w?" warn":"");
  clearTimeout(tT);tT=setTimeout(()=>t.className="toast",2800);};
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const head=(t,b)=>{el("hTitle").textContent=t;el("backBtn").classList.toggle("hide",!b);};
+const head=(t,b)=>{el("hTitle").textContent=t;el("backBtn").classList.toggle("hide",!b);
+ el("logoutBtn").classList.add("hide");};
 const pick=(o,ks)=>{var r={};ks.forEach(function(k){if(o[k]!==undefined)r[k]=o[k];});return r;};
 function tsStr(v){try{return v&&v.toDate?v.toDate().toISOString():(v||"");}catch(e){return "";}}
 
@@ -529,11 +534,11 @@ function startList(){
 }
 function renderListe(){
  view="list";task=null;id=null;D={};dirty=false;LOCKED=false;head("Hastalar",false);
+ el("logoutBtn").classList.remove("hide");
  app.innerHTML="<div class='banner'>Yalnızca <b>çalışma kimliği</b> girin; ad, protokol no veya doğum tarihi girmeyin. "+
   "Kayıtlar canlıdır — ekip aynı hastayı eş zamanlı düzenleyebilir.</div>"+
   "<div id='metUyari'></div><div id='pl'></div>";
- bar.innerHTML="<button class='btn sec' onclick='logout()'>Çıkış</button>"+
-   "<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
+ bar.innerHTML="<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
    "<button class='btn sec' onclick='openVeriSeti()'>Veri seti</button>"+
    "<button class='btn' onclick='yeni()'>Yeni hasta</button>";
  el("metUyari").innerHTML="";
