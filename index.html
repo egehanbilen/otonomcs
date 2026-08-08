@@ -40,6 +40,12 @@ header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-rad
   padding:12px 15px;border-bottom:1px solid var(--line2)}
 .card .in{padding:14px 15px}
 .plist{display:flex;flex-direction:column;gap:10px}
+.grphead{display:flex;align-items:center;gap:8px;font-family:var(--serif);font-size:13.5px;
+  font-weight:600;color:var(--deep);margin:2px 2px 10px;text-transform:none}
+.grphead .gcnt{font-family:var(--mono);font-size:11px;font-weight:700;background:var(--mint);
+  color:var(--deep);border-radius:20px;padding:2px 9px;margin-left:auto}
+.grpgap{height:22px}
+.empty.sm{padding:16px;font-size:13px}
 .pcard{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:13px 14px;
   display:flex;flex-direction:column;gap:9px;cursor:pointer}
 .pcard:active{background:var(--mint)}
@@ -529,9 +535,8 @@ function renderListe(){
    "<button class='btn' onclick='yeni()'>Yeni hasta</button>";
  el("metUyari").innerHTML="";
  const ids=Object.keys(RECS).sort(),b=el("pl");
- if(!ids.length){b.innerHTML="<div class='empty'>Henüz hasta yok.<br><b>Yeni hasta</b> ile başlayın.</div>";return;}
- b.className="plist";
- b.innerHTML=ids.map(function(i){var p=RECS[i]||{};var st=statusOf(p);
+ if(!ids.length){b.className="";b.innerHTML="<div class='empty'>Henüz hasta yok.<br><b>Yeni hasta</b> ile başlayın.</div>";return;}
+ var pcardHTML=function(i){var p=RECS[i]||{};var st=statusOf(p);
   var done=p._a&&p._b24&&p._b48&&st==="kapali";
   var tag=st==="kapali"?"<span class='ptag lock'>kapalı</span>":
           st==="aktif"?"<span class='ptag'>aktif</span>":"<span class='ptag warn'>açık</span>";
@@ -542,8 +547,17 @@ function renderListe(){
    "<span class='pmeta'>"+esc(p._son_giren||"")+"</span></div>"+
    "<div class='steps'><i class='step"+(p._a?" on":"")+"'></i><i class='step"+(p._b24?" on":"")+
    "'></i><i class='step"+(p._b48?" on":"")+"'></i></div>"+
-   "<div class='steplab'><span>başlangıç</span><span>24. saat</span><span>48. saat</span></div></div>";
- }).join("");
+   "<div class='steplab'><span>başlangıç</span><span>24. saat</span><span>48. saat</span></div></div>";};
+ var acik=ids.filter(function(i){return statusOf(RECS[i])!=="kapali";});
+ var kapali=ids.filter(function(i){return statusOf(RECS[i])==="kapali";});
+ var grp=function(title,list,emptyTxt){
+  return "<div class='grphead'>"+title+"<span class='gcnt'>"+list.length+"</span></div>"+
+   (list.length?"<div class='plist'>"+list.map(pcardHTML).join("")+"</div>"
+     :"<div class='empty sm'>"+emptyTxt+"</div>");};
+ b.className="";
+ b.innerHTML=grp("Aktif / yatan hastalar",acik,"Şu an izlemde hasta yok.")+
+   "<div class='grpgap'></div>"+
+   grp("Taburcu — kayıt kapalı",kapali,"Henüz kapatılan kayıt yok.");
 }
 function yeni(){id=null;D={};open2("a",true);}
 
