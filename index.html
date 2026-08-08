@@ -163,8 +163,6 @@ header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-rad
 .logrow input{border:1px solid var(--line);border-radius:9px;padding:12px;min-height:48px;width:100%}
 #login .lbtn{width:100%;background:var(--deep);color:#fff;padding:14px;border-radius:10px;font-weight:650;min-height:50px;margin-top:4px}
 #login .err{color:var(--red);font-size:13px;text-align:center;min-height:18px;margin-top:8px}
-#login .revhint{font-size:11.5px;color:var(--muted);text-align:center;line-height:1.5;
-  margin-top:14px;border-top:1px solid var(--line2);padding-top:12px}
 /* canlı veri seti tablosu */
 .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--white);margin-bottom:12px}
 .dtbl{border-collapse:collapse;width:100%;font-size:12.5px}
@@ -190,7 +188,6 @@ header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-rad
       <input id="lpass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
     <button class="lbtn" id="lbtn" onclick="doLogin()">Giriş yap</button>
     <div class="err" id="loginErr"></div>
-    <div class="revhint">Etik kurul incelemesi için: kullanıcı adı <b>etik kurul</b>, parola <b>1234</b><br>(gerçek hasta verisi görünmez; yalnızca salt-okunur örnek form).</div>
   </div>
 </div>
 
@@ -223,7 +220,12 @@ const firebaseConfig = {
     measurementId: "G-TSFMK34374"
 };
 // Kaydı "yeniden açma"/silme yetkisi olan yönetici(ler). Sorumlu araştırmacının e-postası:
-const ADMIN_EMAILS = ["egehanbilen@gmail.com"];/* ═══════════════════════════════════════════════════════════════════════ */
+const ADMIN_EMAILS = ["egehanbilen@gmail.com"];
+// Salt-okunur inceleme hesapları (ör. etik kurul). Bu e-posta(lar)la giren kullanıcı AYNI sistemi ve
+// AYNI veri setini görür ama HİÇBİR ŞEY değiştiremez (kayıt ekleyemez/düzenleyemez/kapatamaz).
+// İnceleme için: Firebase konsolundan bu e-postayla bir hesap açıp parolasını kurula verin; buraya ekleyin.
+// İptal için: hesabı Firebase'den silin (ve istenirse buradan çıkarın). Boş bırakılırsa inceleme hesabı yoktur.
+const REVIEWER_EMAILS = [];/* ═══════════════════════════════════════════════════════════════════════ */
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -237,12 +239,11 @@ const CFG = ()=>db.collection("config").doc("olcek");
 function meMail(){return (auth.currentUser&&auth.currentUser.email)||"";}
 function who(){var u=auth.currentUser;return u?((u.displayName||u.email||"").trim()):"";}
 function isAdmin(){return ADMIN_EMAILS.map(function(s){return s.toLowerCase();}).indexOf(meMail().toLowerCase())>=0;}
+function isReviewer(){return REVIEWER_EMAILS.map(function(s){return s.toLowerCase();}).indexOf(meMail().toLowerCase())>=0;}
 
 async function doLogin(){
  var e=el("lmail").value.trim(), p=el("lpass").value, er=el("loginErr");
  er.textContent="";
- // Etik kurul inceleme hesabı — Firebase'e bağlanmaz, gerçek veri okumaz; salt-okunur örnek form
- if(e.toLowerCase()==="etik kurul"&&p==="1234"){enterReview();return;}
  if(!e||!p){er.textContent="E-posta ve parola gerekli.";return;}
  var b=el("lbtn");b.disabled=true;b.innerHTML="<span class='spin'></span> Giriş yapılıyor…";
  try{ await auth.signInWithEmailAndPassword(e,p); }
@@ -255,32 +256,6 @@ async function doLogin(){
  } finally { b.disabled=false; b.textContent="Giriş yap"; }
 }
 function logout(){ if(confirm("Çıkış yapılsın mı?")) auth.signOut(); }
-
-/* ── etik kurul inceleme modu (salt-okunur örnek form; gerçek veri yok) ── */
-const SAMPLE_ID="ÖRNEK-01";
-const SAMPLE={study_id:SAMPLE_ID,onam:"Evet",_onam:{alindi:true},cihaz_no:"1",cs_tipi:"Elektif",_tip:"Elektif",_a:1};
-function enterReview(){
- REVIEW=true;
- el("login").classList.add("hide");
- ["hdr","app","bar"].forEach(function(x){el(x).classList.remove("hide");});
- el("whoLbl").textContent="Etik Kurul";
- RECS={};RECS[SAMPLE_ID]=SAMPLE;   // yalnızca örnek kayıt; Firestore hiç sorgulanmaz
- renderReviewHome();
-}
-function exitReview(){ location.reload(); }
-function renderReviewHome(){
- view="list";task=null;id=null;D={};dirty=false;LOCKED=false;head("Etik kurul — inceleme",false);
- app.innerHTML="<div class='banner'>🔒 <b>Etik kurul inceleme modu.</b> Bu ekran <b>salt-okunur örnek</b> formdur; "+
-  "gerçek hasta verisi görüntülenmez. Amaç, çalışmada hangi verilerin toplandığını göstermektir. "+
-  "Aşağıdaki örnek kaydı açarak Başlangıç, 24. ve 48. saat formlarını ve ObsQoR-11T / RCSQ ölçeklerini inceleyebilirsiniz. "+
-  "Ölçek madde metinleri <b>Anket metni</b> ekranından görülebilir.</div>"+
-  "<div class='plist'><div class='pcard' onclick=\"open_('"+esc(SAMPLE_ID)+"')\">"+
-  "<div class='prow'><span class='pid'>"+esc(SAMPLE_ID)+"</span><span class='ptag'>örnek</span>"+
-  "<span class='ptag ok'>salt-okunur</span></div>"+
-  "<div class='steplab'><span>başlangıç</span><span>24. saat</span><span>48. saat</span></div></div></div>";
- bar.innerHTML="<button class='btn sec' onclick='exitReview()'>Çıkış</button>"+
-   "<button class='btn' onclick='openMetin()'>Anket metni</button>";
-}
 
 /* ── form tanımları ── */
 const EH=["","Evet","Hayır"];
@@ -409,7 +384,7 @@ const TASK_KEYS={
 
 let MET={q:[],r:[]};
 let RECS={};            // study_id -> doc verisi (canlı)
-let id=null,task=null,D={},ORIG={},dirty=false,busy=false,view="login",LOCKED=false,REVIEW=false;
+let id=null,task=null,D={},ORIG={},dirty=false,busy=false,view="login",LOCKED=false;
 let unsubList=null,TABCTX=null;
 
 // Ölçek metinleri SABİT — resmî valide (ObsQoR-11T: Ozkan 2022; RCSQ: Karaman Özlü & Özer 2015). Değiştirilemez.
@@ -540,15 +515,16 @@ function startList(){
  },function(err){ if(view==="list"||view==="veriseti")app.innerHTML="<div class='banner err'>Veri okunamadı: "+esc(err.code||err.message)+"</div>"; });
 }
 function renderListe(){
- if(REVIEW){renderReviewHome();return;}
  view="list";task=null;id=null;D={};dirty=false;LOCKED=false;head("Hastalar",false);
- app.innerHTML="<div class='banner'>Yalnızca <b>çalışma kimliği</b> girin; ad, protokol no veya doğum tarihi girmeyin. "+
+ var rvB=isReviewer()?"<div class='banner'>🔒 <b>İnceleme (salt-okunur) hesabı.</b> Sistemi ve tüm veri setini görüntüleyebilirsiniz; "+
+   "kayıt <b>ekleyemez, değiştiremez veya kapatamazsınız</b>.</div>":"";
+ app.innerHTML=rvB+"<div class='banner'>Yalnızca <b>çalışma kimliği</b> girin; ad, protokol no veya doğum tarihi girmeyin. "+
   "Kayıtlar canlıdır — ekip aynı hastayı eş zamanlı düzenleyebilir.</div>"+
   "<div id='metUyari'></div><div id='pl'></div>";
  bar.innerHTML="<button class='btn sec' onclick='logout()'>Çıkış</button>"+
    "<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
    "<button class='btn sec' onclick='openVeriSeti()'>Veri seti</button>"+
-   "<button class='btn' onclick='yeni()'>Yeni hasta</button>";
+   (isReviewer()?"":"<button class='btn' onclick='yeni()'>Yeni hasta</button>");
  el("metUyari").innerHTML="";
  const ids=Object.keys(RECS).sort(),b=el("pl");
  if(!ids.length){b.innerHTML="<div class='empty'>Henüz hasta yok.<br><b>Yeni hasta</b> ile başlayın.</div>";return;}
@@ -597,13 +573,13 @@ function renderVeriSeti(){
 
 async function open_(i){
  view="patient";id=i;task=null;D={};dirty=false;head(i,true);
- var p=RECS[i]||{};var st=statusOf(p);LOCKED=(st==="kapali");if(REVIEW)LOCKED=true;
+ var p=RECS[i]||{};var st=statusOf(p);LOCKED=(st==="kapali");if(isReviewer())LOCKED=true;
  var consent=(p.onam==="Evet"||(p._onam&&p._onam.alindi));
  var badge="<span class='ptag "+(st==="kapali"?"lock":st==="aktif"?"":"warn")+"'>"+STAT_LBL[st]+"</span>";
  var stateHTML="<div class='state'>"+badge+
    (consent?"<span class='ptag ok'>onam ✓</span>":"<span class='ptag warn'>onam yok</span>")+
    (p.cihaz_no?"<span class='ptag'>cihaz "+esc(p.cihaz_no)+"</span>":"")+"</div>";
- var lockHTML=REVIEW?"<div class='lockbox'>🔒 <b>Etik kurul inceleme modu</b> — salt-okunur örnek form. Gerçek hasta verisi değildir; hiçbir alan düzenlenemez/kaydedilemez.</div>"
+ var lockHTML=isReviewer()?"<div class='lockbox'>🔒 <b>İnceleme (salt-okunur) hesabı</b> — kaydı görüntülüyorsunuz; hiçbir alanı değiştiremezsiniz.</div>"
    :LOCKED?"<div class='lockbox'>🔒 Bu kayıt <b>kapalı</b> (izlem bitti). Salt-okunur. "+
    (isAdmin()?"Yönetici olarak düzeltmek için <b>Yeniden aç</b>.":"Düzeltme için sorumlu araştırmacıya bildirin.")+"</div>":"";
  var T=function(n,k,tt,ts,dis){return "<button class='task"+(p["_"+k]?" done":"")+"'"+(dis?" disabled":"")+
@@ -620,7 +596,7 @@ async function open_(i){
   "HRV ve uyku verileri Fitrockr'dan dosya olarak alınır, elle girilmez. Eşleştirme; çalışma kimliği, "+
   "cihaz no ve takma/çıkarma zamanı üzerinden yapılır.</div></div>";
  var actions="<button class='btn sec' onclick='renderListe()'>Hastalar</button>";
- if(st!=="kapali" && p.cikarma) actions+="<button class='btn warn' onclick='kapat()'>Kaydı kapat 🔒</button>";
+ if(st!=="kapali" && p.cikarma && !isReviewer()) actions+="<button class='btn warn' onclick='kapat()'>Kaydı kapat 🔒</button>";
  if(st==="kapali" && isAdmin()) actions+="<button class='btn danger' onclick='yenidenAc()'>Yeniden aç</button>";
  bar.innerHTML=actions;
 }
@@ -736,18 +712,17 @@ function bindScale(pre,tag){
 async function open2(t,isNew){
  view="task";task=t;D={};dirty=false;busy=false;
  var p=isNew?{}:(RECS[id]||{});
- LOCKED=(!isNew&&statusOf(p)==="kapali");if(REVIEW)LOCKED=true;
+ LOCKED=(!isNew&&statusOf(p)==="kapali");if(isReviewer())LOCKED=true;
  // onam kapısı
  if(!isNew&&(t==="b24"||t==="b48")&&!(p.onam==="Evet"||(p._onam&&p._onam.alindi))){
    toast("Önce Başlangıç adımında onam Evet olarak kaydedilmeli",1);return open_(id);}
  head({a:"Başlangıç",b24:"24. saat",b48:"48. saat"}[t],true);
  app.innerHTML="<div class='empty'><span class='spin'></span> Yükleniyor…</div>";
  bar.innerHTML="<button class='btn sec' onclick='goBack()'>Vazgeç</button><button class='btn' disabled>Kaydet</button>";
- if(REVIEW){D=Object.assign({},RECS[id]||{});}   // inceleme modu: Firestore sorgulanmaz, örnek veriden yüklenir
- else if(!isNew&&id){try{var s=await REC(id).get();D=s.exists?s.data():{};}catch(e){D={};}}
+ if(!isNew&&id){try{var s=await REC(id).get();D=s.exists?s.data():{};}catch(e){D={};}}
  // Yükleme anındaki değerleri sakla — kayıtta yalnız gerçekten değişen alanları yazacağız (eşzamanlı veri kaybını önler)
  ORIG={};(TASK_KEYS[task]||[]).forEach(function(k){ORIG[k]=(D[k]&&typeof D[k]==="object")?JSON.parse(JSON.stringify(D[k])):D[k];});
- var lockNote=REVIEW?"<div class='lockbox'>🔒 Etik kurul inceleme modu — salt-okunur örnek form.</div>":
+ var lockNote=isReviewer()?"<div class='lockbox'>🔒 İnceleme (salt-okunur) hesabı — hiçbir alanı değiştiremezsiniz.</div>":
    LOCKED?"<div class='lockbox'>🔒 Kayıt kapalı — salt-okunur.</div>":"";
  if(t==="a"){
   var panelsA=A_SECTIONS.map(function(s){return {t:s.t, body:"<div class='card'><div class='in'>"+
