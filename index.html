@@ -40,12 +40,15 @@ header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-rad
   padding:12px 15px;border-bottom:1px solid var(--line2)}
 .card .in{padding:14px 15px}
 .plist{display:flex;flex-direction:column;gap:10px}
-.grphead{display:flex;align-items:center;gap:8px;font-family:var(--serif);font-size:13.5px;
-  font-weight:600;color:var(--deep);margin:2px 2px 10px;text-transform:none}
-.grphead .gcnt{font-family:var(--mono);font-size:11px;font-weight:700;background:var(--mint);
-  color:var(--deep);border-radius:20px;padding:2px 9px;margin-left:auto}
-.grpgap{height:22px}
-.empty.sm{padding:16px;font-size:13px}
+.ltabs{display:flex;gap:8px;margin-bottom:14px}
+.ltab{flex:1;border:1px solid var(--line);background:var(--white);color:var(--deep);
+  padding:11px 10px;border-radius:10px;font-weight:650;font-size:14px;display:flex;
+  align-items:center;justify-content:center;gap:8px;min-height:48px}
+.ltab.on{background:var(--deep);color:#fff;border-color:var(--deep)}
+.ltab .lb-cnt{font-family:var(--mono);font-size:11px;font-weight:700;background:var(--mint);
+  color:var(--deep);border-radius:20px;padding:2px 8px}
+.ltab.on .lb-cnt{background:rgba(255,255,255,.22);color:#fff}
+.empty.sm{padding:20px 16px;font-size:13px}
 .pcard{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:13px 14px;
   display:flex;flex-direction:column;gap:9px;cursor:pointer}
 .pcard:active{background:var(--mint)}
@@ -394,7 +397,7 @@ const TASK_KEYS={
 
 let MET={q:[],r:[]};
 let RECS={};            // study_id -> doc verisi (canlı)
-let id=null,task=null,D={},ORIG={},dirty=false,busy=false,view="login",LOCKED=false;
+let id=null,task=null,D={},ORIG={},dirty=false,busy=false,view="login",LOCKED=false,listTab=0;
 let unsubList=null,TABCTX=null;
 
 // Ölçek metinleri SABİT — resmî valide (ObsQoR-11T: Ozkan 2022; RCSQ: Karaman Özlü & Özer 2015). Değiştirilemez.
@@ -550,15 +553,19 @@ function renderListe(){
    "<div class='steplab'><span>başlangıç</span><span>24. saat</span><span>48. saat</span></div></div>";};
  var acik=ids.filter(function(i){return statusOf(RECS[i])!=="kapali";});
  var kapali=ids.filter(function(i){return statusOf(RECS[i])==="kapali";});
- var grp=function(title,list,emptyTxt){
-  return "<div class='grphead'>"+title+"<span class='gcnt'>"+list.length+"</span></div>"+
-   (list.length?"<div class='plist'>"+list.map(pcardHTML).join("")+"</div>"
-     :"<div class='empty sm'>"+emptyTxt+"</div>");};
+ if(listTab!==0&&listTab!==1)listTab=0;
+ var tabs="<div class='ltabs'>"+
+   "<button type='button' class='ltab"+(listTab===0?" on":"")+"' onclick='setListTab(0)'>"+
+     "Aktif / yatan<span class='lb-cnt'>"+acik.length+"</span></button>"+
+   "<button type='button' class='ltab"+(listTab===1?" on":"")+"' onclick='setListTab(1)'>"+
+     "Taburcu<span class='lb-cnt'>"+kapali.length+"</span></button></div>";
+ var list=listTab===0?acik:kapali;
+ var emptyTxt=listTab===0?"Şu an izlemde (yatan) hasta yok.":"Henüz taburcu edilip kapatılan kayıt yok.";
  b.className="";
- b.innerHTML=grp("Aktif / yatan hastalar",acik,"Şu an izlemde hasta yok.")+
-   "<div class='grpgap'></div>"+
-   grp("Taburcu — kayıt kapalı",kapali,"Henüz kapatılan kayıt yok.");
+ b.innerHTML=tabs+(list.length?"<div class='plist'>"+list.map(pcardHTML).join("")+"</div>"
+   :"<div class='empty sm'>"+emptyTxt+"</div>");
 }
+function setListTab(t){listTab=t;renderListe();}
 function yeni(){id=null;D={};open2("a",true);}
 
 /* ── canlı veri seti (Firestore anlık; ayrı dosyaya gerek yok) ── */
