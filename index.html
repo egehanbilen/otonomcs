@@ -220,12 +220,7 @@ const firebaseConfig = {
     measurementId: "G-TSFMK34374"
 };
 // Kaydı "yeniden açma"/silme yetkisi olan yönetici(ler). Sorumlu araştırmacının e-postası:
-const ADMIN_EMAILS = ["egehanbilen@gmail.com"];
-// Salt-okunur inceleme hesapları (ör. etik kurul). Bu e-posta(lar)la giren kullanıcı AYNI sistemi ve
-// AYNI veri setini görür ama HİÇBİR ŞEY değiştiremez (kayıt ekleyemez/düzenleyemez/kapatamaz).
-// İnceleme için: Firebase konsolundan bu e-postayla bir hesap açıp parolasını kurula verin; buraya ekleyin.
-// İptal için: hesabı Firebase'den silin (ve istenirse buradan çıkarın). Boş bırakılırsa inceleme hesabı yoktur.
-const REVIEWER_EMAILS = [];/* ═══════════════════════════════════════════════════════════════════════ */
+const ADMIN_EMAILS = ["egehanbilen@gmail.com"];/* ═══════════════════════════════════════════════════════════════════════ */
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -239,7 +234,6 @@ const CFG = ()=>db.collection("config").doc("olcek");
 function meMail(){return (auth.currentUser&&auth.currentUser.email)||"";}
 function who(){var u=auth.currentUser;return u?((u.displayName||u.email||"").trim()):"";}
 function isAdmin(){return ADMIN_EMAILS.map(function(s){return s.toLowerCase();}).indexOf(meMail().toLowerCase())>=0;}
-function isReviewer(){return REVIEWER_EMAILS.map(function(s){return s.toLowerCase();}).indexOf(meMail().toLowerCase())>=0;}
 
 async function doLogin(){
  var e=el("lmail").value.trim(), p=el("lpass").value, er=el("loginErr");
@@ -516,15 +510,13 @@ function startList(){
 }
 function renderListe(){
  view="list";task=null;id=null;D={};dirty=false;LOCKED=false;head("Hastalar",false);
- var rvB=isReviewer()?"<div class='banner'>🔒 <b>İnceleme (salt-okunur) hesabı.</b> Sistemi ve tüm veri setini görüntüleyebilirsiniz; "+
-   "kayıt <b>ekleyemez, değiştiremez veya kapatamazsınız</b>.</div>":"";
- app.innerHTML=rvB+"<div class='banner'>Yalnızca <b>çalışma kimliği</b> girin; ad, protokol no veya doğum tarihi girmeyin. "+
+ app.innerHTML="<div class='banner'>Yalnızca <b>çalışma kimliği</b> girin; ad, protokol no veya doğum tarihi girmeyin. "+
   "Kayıtlar canlıdır — ekip aynı hastayı eş zamanlı düzenleyebilir.</div>"+
   "<div id='metUyari'></div><div id='pl'></div>";
  bar.innerHTML="<button class='btn sec' onclick='logout()'>Çıkış</button>"+
    "<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
    "<button class='btn sec' onclick='openVeriSeti()'>Veri seti</button>"+
-   (isReviewer()?"":"<button class='btn' onclick='yeni()'>Yeni hasta</button>");
+   "<button class='btn' onclick='yeni()'>Yeni hasta</button>";
  el("metUyari").innerHTML="";
  const ids=Object.keys(RECS).sort(),b=el("pl");
  if(!ids.length){b.innerHTML="<div class='empty'>Henüz hasta yok.<br><b>Yeni hasta</b> ile başlayın.</div>";return;}
@@ -573,14 +565,13 @@ function renderVeriSeti(){
 
 async function open_(i){
  view="patient";id=i;task=null;D={};dirty=false;head(i,true);
- var p=RECS[i]||{};var st=statusOf(p);LOCKED=(st==="kapali");if(isReviewer())LOCKED=true;
+ var p=RECS[i]||{};var st=statusOf(p);LOCKED=(st==="kapali");
  var consent=(p.onam==="Evet"||(p._onam&&p._onam.alindi));
  var badge="<span class='ptag "+(st==="kapali"?"lock":st==="aktif"?"":"warn")+"'>"+STAT_LBL[st]+"</span>";
  var stateHTML="<div class='state'>"+badge+
    (consent?"<span class='ptag ok'>onam ✓</span>":"<span class='ptag warn'>onam yok</span>")+
    (p.cihaz_no?"<span class='ptag'>cihaz "+esc(p.cihaz_no)+"</span>":"")+"</div>";
- var lockHTML=isReviewer()?"<div class='lockbox'>🔒 <b>İnceleme (salt-okunur) hesabı</b> — kaydı görüntülüyorsunuz; hiçbir alanı değiştiremezsiniz.</div>"
-   :LOCKED?"<div class='lockbox'>🔒 Bu kayıt <b>kapalı</b> (izlem bitti). Salt-okunur. "+
+ var lockHTML=LOCKED?"<div class='lockbox'>🔒 Bu kayıt <b>kapalı</b> (izlem bitti). Salt-okunur. "+
    (isAdmin()?"Yönetici olarak düzeltmek için <b>Yeniden aç</b>.":"Düzeltme için sorumlu araştırmacıya bildirin.")+"</div>":"";
  var T=function(n,k,tt,ts,dis){return "<button class='task"+(p["_"+k]?" done":"")+"'"+(dis?" disabled":"")+
    " onclick=\"open2('"+k+"')\"><span class='n'>"+n+"</span><span class='tx'><span class='tt'>"+tt+
@@ -596,7 +587,7 @@ async function open_(i){
   "HRV ve uyku verileri Fitrockr'dan dosya olarak alınır, elle girilmez. Eşleştirme; çalışma kimliği, "+
   "cihaz no ve takma/çıkarma zamanı üzerinden yapılır.</div></div>";
  var actions="<button class='btn sec' onclick='renderListe()'>Hastalar</button>";
- if(st!=="kapali" && p.cikarma && !isReviewer()) actions+="<button class='btn warn' onclick='kapat()'>Kaydı kapat 🔒</button>";
+ if(st!=="kapali" && p.cikarma) actions+="<button class='btn warn' onclick='kapat()'>Kaydı kapat 🔒</button>";
  if(st==="kapali" && isAdmin()) actions+="<button class='btn danger' onclick='yenidenAc()'>Yeniden aç</button>";
  bar.innerHTML=actions;
 }
@@ -712,7 +703,7 @@ function bindScale(pre,tag){
 async function open2(t,isNew){
  view="task";task=t;D={};dirty=false;busy=false;
  var p=isNew?{}:(RECS[id]||{});
- LOCKED=(!isNew&&statusOf(p)==="kapali");if(isReviewer())LOCKED=true;
+ LOCKED=(!isNew&&statusOf(p)==="kapali");
  // onam kapısı
  if(!isNew&&(t==="b24"||t==="b48")&&!(p.onam==="Evet"||(p._onam&&p._onam.alindi))){
    toast("Önce Başlangıç adımında onam Evet olarak kaydedilmeli",1);return open_(id);}
@@ -722,8 +713,7 @@ async function open2(t,isNew){
  if(!isNew&&id){try{var s=await REC(id).get();D=s.exists?s.data():{};}catch(e){D={};}}
  // Yükleme anındaki değerleri sakla — kayıtta yalnız gerçekten değişen alanları yazacağız (eşzamanlı veri kaybını önler)
  ORIG={};(TASK_KEYS[task]||[]).forEach(function(k){ORIG[k]=(D[k]&&typeof D[k]==="object")?JSON.parse(JSON.stringify(D[k])):D[k];});
- var lockNote=isReviewer()?"<div class='lockbox'>🔒 İnceleme (salt-okunur) hesabı — hiçbir alanı değiştiremezsiniz.</div>":
-   LOCKED?"<div class='lockbox'>🔒 Kayıt kapalı — salt-okunur.</div>":"";
+ var lockNote=LOCKED?"<div class='lockbox'>🔒 Kayıt kapalı — salt-okunur.</div>":"";
  if(t==="a"){
   var panelsA=A_SECTIONS.map(function(s){return {t:s.t, body:"<div class='card'><div class='in'>"+
     s.f.map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>"};});
