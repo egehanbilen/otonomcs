@@ -84,6 +84,16 @@ header .who{background:#23505c;color:#cfe3e6;border:1px solid #35707e;border-rad
 .q .lb{flex:1;font-size:14.5px}
 .q input{width:74px;min-height:46px;text-align:center;font-family:var(--mono);font-size:17px;
   border:1px solid var(--line);border-radius:9px}
+/* ObsQoR dokunmatik 0–10 seçim (iOS'ta klavye gerektirmez) */
+.nrow{padding:11px 0;border-bottom:1px solid var(--line2)}
+.nrow .lb{font-size:14.5px;margin-bottom:9px}
+.nchips{display:flex;flex-wrap:wrap;gap:6px}
+.nchip{border:1px solid var(--line);background:var(--white);color:var(--text);min-width:42px;
+  min-height:44px;padding:0 8px;border-radius:9px;font-weight:700;font-size:16px;
+  font-family:var(--mono);flex:0 0 auto}
+.nchip:active{background:var(--mint)}
+.nchip.on{background:var(--deep);color:#fff;border-color:var(--deep)}
+.nchip[disabled]{opacity:.45}
 .vas{padding:11px 0;border-bottom:1px solid var(--line2)}
 .vas .top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .vas .lb{flex:1;font-size:14.5px}
@@ -619,13 +629,18 @@ async function yenidenAc(){
 function obsqorCard(pre,qv){
  var h="<div class='card'><h2>ObsQoR-11T</h2><div class='in' id='"+pre+"q'>"+
   "<div class='qnote'>Son 24 saatte nasıl hissediyorsunuz? Her madde 0–10 (0: çok kötü, 10: mükemmel). "+
-  "Hastanın işaretlediği kutunun üstündeki <b>sayıyı</b> girin.</div>";
+  "Hastanın işaretlediği kutunun üstündeki <b>sayıya dokunun</b>.</div>";
  for(var i=1;i<=11;i++){
    if(i===1)h+="<div class='qhead'>Madde 1–5 &nbsp;·&nbsp; 10 = kesinlikle katılmıyorum → 0 = kesinlikle katılıyorum</div>";
    if(i===6)h+="<div class='qhead'>Madde 6–11 &nbsp;·&nbsp; 0 = kesinlikle katılmıyorum → 10 = kesinlikle katılıyorum</div>";
-   h+="<div class='q'><span class='lb'><b>"+i+".</b> "+esc(qMet(i))+"</span>"+
-   "<input type='number' inputmode='numeric' min='0' max='10' data-i='"+i+"' value='"+
-   esc((qv||[])[i-1]==null?"":(qv||[])[i-1])+"'></div>";
+   var cur=(qv||[])[i-1];
+   var chips="";
+   for(var n=0;n<=10;n++){
+     var on=(cur!=null&&cur!==""&&(+cur)===n);
+     chips+="<button type='button' class='nchip"+(on?" on":"")+"' data-i='"+i+"' data-v='"+n+"'>"+n+"</button>";
+   }
+   h+="<div class='nrow'><div class='lb'><b>"+i+".</b> "+esc(qMet(i))+"</div>"+
+      "<div class='nchips'>"+chips+"</div></div>";
  }
  h+="<div class='total'><span>Toplam (0&ndash;110 · yüksek = iyi)</span><b id='"+pre+"qt'>&mdash;</b></div></div></div>";
  return h;
@@ -681,21 +696,25 @@ function bindMeds(){var box=el("medsbox");if(!box)return;
 function bindScale(pre,tag){
  var qb=el(pre+"q"),rb=el(pre+"r");
  D[tag+"q"]=D[tag+"q"]||[];D[tag+"r"]=D[tag+"r"]||[];
- var uq=function(){var s=0,n=0,bad=false;qb.querySelectorAll("input").forEach(function(i){
-   if(i.value!==""){var v=parseFloat(i.value);var ok=!isNaN(v)&&v>=0&&v<=10;
-     i.style.borderColor=ok?"":"var(--red)";if(!ok){bad=true;}else{s+=v;n++;}}
-   else{i.style.borderColor="";}});
-   el(pre+"qt").textContent=bad?"0–10 dışı değer var!":(n===11?s:(n?n+"/11 madde":"—"));};
+ var uq=function(){var arr=D[tag+"q"]||[];var v=arr.filter(function(x){return x!==""&&x!=null;});
+   el(pre+"qt").textContent=v.length===11?v.reduce(function(a,b){return a+ +b;},0):(v.length?v.length+"/11 madde":"—");};
  var ur=function(){var s=0,n=0;rb.querySelectorAll("input").forEach(function(i){
    if(+i.dataset.i<5&&i.dataset.t==="1"){s+=parseFloat(i.value);n++;}});
    el(pre+"rt").textContent=n===5?(s/5).toFixed(1):(n?n+"/5 madde":"—");};
- if(LOCKED){
-   qb.querySelectorAll("input").forEach(function(i){i.disabled=true;});
-   rb.querySelectorAll("input").forEach(function(i){i.disabled=true;});
-   uq();ur();return;
- }
- qb.querySelectorAll("input").forEach(function(i){i.addEventListener("input",function(){
-   D[tag+"q"][+i.dataset.i-1]=i.value;dirty=true;uq();});});uq();
+ // ObsQoR — dokunmatik 0–10 seçim (klavye gerekmez)
+ qb.querySelectorAll(".nchip").forEach(function(b){
+   if(LOCKED){b.disabled=true;return;}
+   b.addEventListener("click",function(){
+     var i=+b.dataset.i,v=b.dataset.v,cur=D[tag+"q"][i-1];
+     var nv=(cur!=null&&(""+cur)===v)?"":v;   // aynı sayıya tekrar dokununca seçimi kaldırır
+     D[tag+"q"][i-1]=nv;dirty=true;
+     qb.querySelectorAll(".nchip[data-i='"+i+"']").forEach(function(x){
+       x.classList.toggle("on",nv!==""&&x.dataset.v===nv);});
+     uq();});
+ });
+ uq();
+ // RCSQ — kaydırıcılar
+ if(LOCKED){ rb.querySelectorAll("input").forEach(function(i){i.disabled=true;});ur();return; }
  rb.querySelectorAll("input").forEach(function(i){i.addEventListener("input",function(){
    i.dataset.t="1";el(pre+"v"+i.dataset.i).textContent=i.value;
    D[tag+"r"][+i.dataset.i]=i.value;dirty=true;ur();});});ur();
