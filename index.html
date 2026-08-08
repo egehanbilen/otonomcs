@@ -297,6 +297,8 @@ const A_SECTIONS=[
   ["cogul","Çoğul gebelik","select",{opt:EH}],
   ["onceki_cs","Önceki sezaryen sayısı","num",{min:0,max:10}],
   ["preeklampsi","Preeklampsi / HT","select",{opt:EH}],
+  ["mgso4","MgSO₄ (magnezyum) verildi","select",{opt:EH}],
+  ["antihipertansif","Antihipertansif ilaç","selother",{opt:["Yok","Beta-bloker (labetalol / metoprolol)","Metildopa","Kalsiyum kanal blokeri (nifedipin)","Diğer"],other:"Diğer"}],
   ["gdm","Gestasyonel DM","select",{opt:EH}],
   ["tiroid","Tiroid hastalığı","select",{opt:EH}],
   ["komorbidite","Diğer komorbidite","text",{ph:"Yok"}]
@@ -316,7 +318,6 @@ const A_SECTIONS=[
  {t:"Laboratuvar", f:[
   ["hb_pre","Preop hemoglobin (g/dL)","num",{min:4,max:18,step:.1}],
   ["hb_post","Postop hemoglobin (g/dL)","num",{min:4,max:18,step:.1}],
-  ["hct_post","Postop hematokrit (%)","num",{min:15,max:60,step:.1}],
   ["transfuzyon","Kan transfüzyonu","select",{opt:EH}]
  ]},
  {t:"Uyku & çevre karıştırıcıları", f:[
@@ -391,7 +392,7 @@ const RCSQ_ANCHORS=[
  ["Tekrar uyuyamadım","Hemen tekrar uyudum"],
  ["Kötü bir gece uykusu","İyi bir gece uykusu"],
  ["Çok gürültülü","Çok sessiz"]];
-const A_KEYS=A.map(function(f){return f[0];}).concat(["endikasyon_diger","uterotonik_diger"]);
+const A_KEYS=A.map(function(f){return f[0];}).concat(["endikasyon_diger","uterotonik_diger","antihipertansif_diger"]);
 const C_KEYS=C.map(function(f){return f[0];});
 const TASK_KEYS={
  a:  A_KEYS.concat([]),
@@ -686,12 +687,14 @@ function rcsqCard(pre,rv){
  return h;
 }
 function agriDefs(pre){return [
- [pre+"_nrs_din","NRS dinlenim (0–10)","num",{min:0,max:10}],
- [pre+"_nrs_har","NRS hareket (0–10)","num",{min:0,max:10}],
+ [pre+"_nrs_din","Ağrı — dinlenirken (NRS 0–10)","num",{min:0,max:10}],
+ [pre+"_nrs_har","Ağrı — harekette / öksürünce (NRS 0–10)","num",{min:0,max:10}],
  [pre+"_gece_emzirme","Gece emzirme sayısı","num",{min:0,max:15}],
  [pre+"_sedatif","Gece sedatif / uyku ilacı","select",{opt:EH}]
 ];}
 function agriCard(pre){return "<div class='card'><h2>Ağrı & gece</h2><div class='in'>"+
+ "<div class='qnote'>NRS = Sayısal Ağrı Ölçeği: hastanın söylediği sayı (<b>0 = ağrı yok, 10 = en şiddetli ağrı</b>). "+
+ "Ağrıyı hem <b>dinlenirken</b> hem de <b>harekette</b> (oturup kalkma, öksürme, derin nefes) ayrı sorun.</div>"+
  agriDefs(pre).map(function(f){return fh(f[0],f[1],f[2],f[3]);}).join("")+"</div></div>";}
 /* ── analjezi rejimi (ilaç seçimi + doz/kez) ── */
 const DRUGS=["Parasetamol","Deksketoprofen","Diklofenak","İbuprofen","Tenoksikam","Metamizol","Naproksen","Tramadol","Morfin","Petidin"];
