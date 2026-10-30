@@ -152,7 +152,8 @@ header .hbtn:active{background:#2d6472}
 .medf[inputmode]{font-family:var(--mono)}
 .medf:focus{border-color:var(--teal)}
 /* sekmeler */
-.tabs2{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch}
+/* Sekmeler alt satıra sarılır: tüm bölümler kaydırmadan görünür */
+.tabs2{display:flex;flex-wrap:wrap;gap:7px;padding:2px 0 12px}
 .tabs2::-webkit-scrollbar{height:0}
 .tab2{flex:0 0 auto;border:1px solid var(--line);background:var(--white);color:var(--deep);
   padding:9px 14px;border-radius:20px;font-size:13px;font-weight:650;white-space:nowrap}
@@ -204,8 +205,8 @@ header .hbtn:active{background:#2d6472}
     <div class="eyebrow">Otonom CS</div>
     <h1>Veri Girişi</h1>
     <div class="st" id="loginState"><span class="spin"></span> Bağlanıyor…</div>
-    <div class="logrow"><label for="lmail">E-posta</label>
-      <input id="lmail" type="email" autocomplete="username" inputmode="email" placeholder="e-posta adresiniz"></div>
+    <div class="logrow"><label for="lmail">Kullanıcı adı</label>
+      <input id="lmail" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ör. begum (veya e-posta)"></div>
     <div class="logrow"><label for="lpass">Parola</label>
       <input id="lpass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
     <button class="lbtn" id="lbtn" onclick="doLogin()">Giriş yap</button>
@@ -255,18 +256,31 @@ const CFG = ()=>db.collection("config").doc("olcek");
 
 /* ── kimlik ── */
 function meMail(){return (auth.currentUser&&auth.currentUser.email)||"";}
-function who(){var u=auth.currentUser;return u?((u.displayName||u.email||"").trim()):"";}
+// Ekranda ve denetim izinde e-posta yerine görünen ad
+const NAMES={"egehanbilen@gmail.com":"Egehan Bilen","begum@otonomcs.local":"Begüm","begum.berfin@gmail.com":"Begüm",
+             "zehra@otonomcs.local":"Zehra","nizami@otonomcs.local":"Nizami"};
+function who(){var u=auth.currentUser;if(!u)return "";
+ return NAMES[(u.email||"").toLowerCase()]||(u.displayName||u.email||"").trim().replace(USER_DOMAIN,"");}
+// Ekip hesapları kullanıcı adıyla girer (begum → begum@otonomcs.local); yönetici e-postasıyla girer.
+const USER_DOMAIN="@otonomcs.local";
+function loginMail(s){
+ s=s.trim();
+ if(s.indexOf("@")>=0) return s;
+ var tr={"ç":"c","ğ":"g","ı":"i","İ":"i","ö":"o","ş":"s","ü":"u"};
+ return s.replace(/[çğıİöşü]/g,function(c){return tr[c];}).toLowerCase()+USER_DOMAIN;
+}
 function isAdmin(){return ADMIN_EMAILS.map(function(s){return s.toLowerCase();}).indexOf(meMail().toLowerCase())>=0;}
 
 async function doLogin(){
  var e=el("lmail").value.trim(), p=el("lpass").value, er=el("loginErr");
  er.textContent="";
- if(!e||!p){er.textContent="E-posta ve parola gerekli.";return;}
+ if(!e||!p){er.textContent="Kullanıcı adı ve parola gerekli.";return;}
+ e=loginMail(e);
  var b=el("lbtn");b.disabled=true;b.innerHTML="<span class='spin'></span> Giriş yapılıyor…";
  try{ await auth.signInWithEmailAndPassword(e,p); }
  catch(x){
-   var m={"auth/invalid-credential":"E-posta veya parola hatalı.",
-          "auth/invalid-email":"Geçersiz e-posta.",
+   var m={"auth/invalid-credential":"Kullanıcı adı veya parola hatalı.",
+          "auth/invalid-email":"Geçersiz kullanıcı adı.",
           "auth/user-disabled":"Bu hesap devre dışı.",
           "auth/too-many-requests":"Çok fazla deneme. Biraz bekleyin."};
    er.textContent=m[x.code]||("Giriş başarısız: "+(x.code||x.message));
@@ -280,6 +294,8 @@ const EH=["","Evet","Hayır"];
 const A_SECTIONS=[
  {t:"Kimlik & demografik", f:[
   ["study_id","Çalışma ID","id",{req:1,mono:1,ph:"CS-001"}],
+  ["hasta_adi","Hasta adı soyadı","text",{req:1,hint:"Yalnızca ekip içi hasta takibi için; CSV dışa aktarımına dahil edilmez."}],
+  ["protokol_no","Hastane protokol no","text",{req:1,mono:1,hint:"Hastaların karışmaması için; CSV dışa aktarımına dahil edilmez."}],
   ["yas","Yaş (yıl)","num",{min:15,max:55}],
   ["boy_cm","Boy (cm)","num",{min:130,max:200}],
   ["kilo_gebelik_oncesi","Gebelik öncesi kilo (kg)","num",{min:35,max:180,step:.1}],
@@ -351,6 +367,7 @@ const C_SECTIONS=[
  {t:"Cihaz çıkarma & veri kalitesi", f:[
   ["cikarma","Cihaz çıkarma (tarih-saat)","datetime-local",{req:1}],
   ["wear","Toplam takı süresi (saat)","calc",{}],
+  ["fitrockr_senk","Fitrockr senkronizasyonu tamamlandı","select",{opt:EH,hint:"Saat çıkarıldıktan sonra kendi telefonunda senkronize edilir; sonra bir sonraki hastaya takılabilir."}],
   ["periferik_odem","Periferik ödem","select",{opt:EH}],
   ["sinyal_kabul","Sinyal kalitesi kabul","select",{opt:EH}],
   ["dahil","Analize dahil","select",{req:1,opt:EH}],
@@ -536,7 +553,7 @@ function startList(){
 function renderListe(){
  view="list";task=null;id=null;D={};dirty=false;LOCKED=false;head("Hastalar",false);
  el("logoutBtn").classList.remove("hide");
- app.innerHTML="<div class='banner'>Yalnızca <b>çalışma kimliği</b> girin; ad, protokol no veya doğum tarihi girmeyin. "+
+ app.innerHTML="<div class='banner'>Hasta <b>adı soyadı</b> ve <b>protokol no</b> yalnızca ekip içi takip içindir, analiz dosyasına girmez; TC kimlik no veya doğum tarihi girmeyin. "+
   "Kayıtlar canlıdır — ekip aynı hastayı eş zamanlı düzenleyebilir.</div>"+
   "<div id='metUyari'></div><div id='pl'></div>";
  bar.innerHTML="<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
@@ -551,6 +568,8 @@ function renderListe(){
           st==="aktif"?"<span class='ptag'>aktif</span>":"<span class='ptag warn'>açık</span>";
   return "<div class='pcard' onclick=\"open_('"+esc(i)+"')\">"+
    "<div class='prow'><span class='pid'>"+esc(i)+"</span>"+
+   (p.hasta_adi?"<span style='font-size:14px;font-weight:650'>"+esc(p.hasta_adi)+"</span>":"")+
+   (p.protokol_no?"<span class='ptag'>"+esc(p.protokol_no)+"</span>":"")+
    (p._tip?"<span class='ptag'>"+esc(p._tip)+"</span>":"")+tag+
    (done?"<span class='ptag ok'>tamam</span>":"")+
    "<span class='pmeta'>"+esc(p._son_giren||"")+"</span></div>"+
@@ -601,8 +620,9 @@ function renderVeriSeti(){
 }
 
 async function open_(i){
- view="patient";id=i;task=null;D={};dirty=false;head(i,true);
- var p=RECS[i]||{};var st=statusOf(p);LOCKED=(st==="kapali");
+ var p=RECS[i]||{};
+ view="patient";id=i;task=null;D={};dirty=false;head(i+(p.hasta_adi?" · "+p.hasta_adi:""),true);
+ var st=statusOf(p);LOCKED=(st==="kapali");
  var consent=(p.onam==="Evet"||(p._onam&&p._onam.alindi));
  var badge="<span class='ptag "+(st==="kapali"?"lock":st==="aktif"?"":"warn")+"'>"+STAT_LBL[st]+"</span>";
  var stateHTML="<div class='state'>"+badge+
@@ -633,6 +653,7 @@ async function open_(i){
 async function kapat(){
  var p=RECS[id]||{};
  if(!p.cikarma){toast("Önce 48. saat adımında cihaz çıkarma zamanını girin",1);return;}
+ if(p.fitrockr_senk!=="Evet"&&!confirm("Fitrockr senkronizasyonu 'Evet' olarak işaretlenmemiş. Saat senkronize edilmeden bir sonraki hastaya takılırsa veri kaybolabilir. Yine de kapatılsın mı?"))return;
  if(!confirm(id+" kaydı KAPATILSIN mı? Kapanınca kayıt kilitlenir ve veri sete dahil olur."))return;
  try{
    await REC(id).set({_kapali:true,_kapanis:TS(),_kapatan:who(),
@@ -758,7 +779,12 @@ async function open2(t,isNew){
  head({a:"Başlangıç",b24:"24. saat",b48:"48. saat"}[t],true);
  app.innerHTML="<div class='empty'><span class='spin'></span> Yükleniyor…</div>";
  bar.innerHTML="<button class='btn sec' onclick='goBack()'>Vazgeç</button><button class='btn' disabled>Kaydet</button>";
- if(!isNew&&id){try{var s=await REC(id).get();D=s.exists?s.data():{};}catch(e){D={};}}
+ // Canlı listede kayıt zaten varsa ağdan tekrar çekme (açılış gecikmesini önler); yoksa sunucudan oku
+ if(!isNew&&id){
+   if(RECS[id]){D={};Object.keys(RECS[id]).forEach(function(k){var v=RECS[id][k];
+     D[k]=(v&&typeof v==="object"&&!v.toDate)?JSON.parse(JSON.stringify(v)):v;});}
+   else{try{var s=await REC(id).get();D=s.exists?s.data():{};}catch(e){D={};}}
+ }
  // Yükleme anındaki değerleri sakla — kayıtta yalnız gerçekten değişen alanları yazacağız (eşzamanlı veri kaybını önler)
  ORIG={};(TASK_KEYS[task]||[]).forEach(function(k){ORIG[k]=(D[k]&&typeof D[k]==="object")?JSON.parse(JSON.stringify(D[k])):D[k];});
  var lockNote=LOCKED?"<div class='lockbox'>🔒 Kayıt kapalı — salt-okunur.</div>":"";
@@ -835,7 +861,7 @@ function unlockSave(){busy=false;var x=el("sv");if(x){x.disabled=false;x.textCon
 async function kaydet(){
  if(busy||LOCKED)return;
  // 1) Zorunlu alan eksikse: alanı içeren sekmeye geç + adını söyle
- var need=task==="a"?["study_id","cs_tipi","bebek_dogum","cihaz_no","takma","onam"]:(task==="b48"?["cikarma","dahil"]:[]);
+ var need=task==="a"?["study_id","hasta_adi","protokol_no","cs_tipi","bebek_dogum","cihaz_no","takma","onam"]:(task==="b48"?["cikarma","dahil"]:[]);
  for(var n=0;n<need.length;n++){var k=need[n];
   if(!D[k]){var lbl=gotoField(k);el("w_"+k).classList.add("bad");toast("Eksik zorunlu alan: "+lbl,1);return;}}
  // 2) ObsQoR maddeleri 0–10 dışıysa engelle (sabit ölçek)
@@ -848,6 +874,14 @@ async function kaydet(){
  var badEl=app.querySelector(".f.bad");
  if(badEl){var bk=badEl.id.replace(/^w_/,"");
   if(!confirm("Bazı değerler beklenen aralık dışında. Yine de kaydedilsin mi?")){gotoField(bk);return;}}
+ // 4) Aynı cihaz başka bir hastada hâlâ takılı mı? (HRV eşleştirmesi cihaz no + takma/çıkarma saatine dayanır)
+ if(task==="a"&&D.cihaz_no){var cak=Object.keys(RECS).filter(function(k){var r=RECS[k]||{};
+   return k!==id&&r.cihaz_no===D.cihaz_no&&!r.cikarma&&statusOf(r)!=="kapali";});
+  if(cak.length&&!confirm("Cihaz "+D.cihaz_no+" hâlâ "+cak.join(", ")+" kaydında takılı görünüyor (çıkarma saati girilmemiş). Yine de kaydedilsin mi?")){gotoField("cihaz_no");return;}
+  // Önceki hastanın verisi saatten alınmadan yeni hastaya takılırsa hafıza dolup BBI kaydı durabilir
+  var senksiz=id?[]:Object.keys(RECS).filter(function(k){var r=RECS[k]||{};
+   return r.cihaz_no===D.cihaz_no&&r.cihaz_no===D.cihaz_no&&r.cikarma&&r.fitrockr_senk!=="Evet";});
+  if(senksiz.length&&!confirm("Cihaz "+D.cihaz_no+" için "+senksiz.join(", ")+" kaydında Fitrockr senkronizasyonu işaretlenmemiş. Saat senkronize edilmeden yeni hastaya takılırsa hafıza dolup kayıt durabilir. Yine de kaydedilsin mi?")){gotoField("cihaz_no");return;}}
  busy=true;var b=el("sv");if(b){b.disabled=true;b.innerHTML="<span class='spin'></span> Kaydediliyor…";}
  try{
   var existed=true;
@@ -894,7 +928,8 @@ function exportAll(){
  var ids=Object.keys(RECS).sort();
  if(!ids.length){toast("Dışa aktarılacak kayıt yok",1);return;}
  var rows=ids.map(function(i){return Object.assign({study_id:i},RECS[i]||{});});
- var keys=A_KEYS.concat(C_KEYS).filter(function(v,x,a){return a.indexOf(v)===x;});
+ // Hasta adı analiz dosyasına girmez (CSV yalnızca çalışma kodu ile)
+ var keys=A_KEYS.concat(C_KEYS).filter(function(v,x,a){return a.indexOf(v)===x&&v!=="hasta_adi"&&v!=="protokol_no";});
  ["b24","b48"].forEach(function(t){
    for(var i=1;i<=11;i++)keys.push(t+"_obsqor_m"+i);
    keys.push(t+"_obsqor_toplam");
@@ -938,9 +973,10 @@ auth.onAuthStateChanged(async function(u){
    el("login").classList.add("hide");
    ["hdr","app","bar"].forEach(function(x){el(x).classList.remove("hide");});
    el("whoLbl").textContent=who();
-   await loadMet();
+   // Liste dinleyicisi ve anket metni paralel yüklensin (sırayla beklemek girişi yavaşlatıyordu)
    startList();
    renderListe();
+   loadMet();
  }else{
    if(unsubList){unsubList();unsubList=null;}
    RECS={};view="login";
