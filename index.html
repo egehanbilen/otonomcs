@@ -932,7 +932,8 @@ async function kaydet(){
   if(task==="a"){
    patch._tip=D.cs_tipi||"";patch._a=1;
    if(!existed){patch._kapali=false;patch._acan=who();patch._acilis=TS();}
-   if(D.onam==="Evet")patch._onam={alindi:true,at:new Date().toISOString(),by:who()};
+   // Onam damgası yalnız ilk kez / onam yeni Evet yapıldığında atılır — sonraki düzeltmeler asıl onam saatini ezmez
+   if(D.onam==="Evet"&&(chg.indexOf("onam")>=0||!(D._onam&&D._onam.alindi)))patch._onam={alindi:true,at:new Date().toISOString(),by:who()};
   }
   if(task==="b24")patch._b24=full("b24")?1:0;
   if(task==="b48")patch._b48=(full("b48")&&D.cikarma&&D.dahil)?1:0;
