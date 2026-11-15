@@ -100,6 +100,8 @@ header .hbtn:active{background:#2d6472}
 .nrow{padding:11px 0;border-bottom:1px solid var(--line2)}
 .nrow .lb{font-size:14.5px;margin-bottom:9px}
 .nchips{display:flex;flex-wrap:wrap;gap:6px}
+.nends{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:6px}
+.qsub{font-weight:400}
 .nchip{border:1px solid var(--line);background:var(--white);color:var(--text);min-width:42px;
   min-height:44px;padding:0 8px;border-radius:9px;font-weight:700;font-size:16px;
   font-family:var(--mono);flex:0 0 auto}
@@ -706,8 +708,8 @@ function obsqorCard(pre,qv){
   "<div class='qnote'>Son 24 saatte nasıl hissediyorsunuz? Her madde 0–10 (0: çok kötü, 10: mükemmel). "+
   "Hastanın işaretlediği kutunun üstündeki <b>sayıya dokunun</b>.</div>";
  for(var i=1;i<=11;i++){
-   if(i===1)h+="<div class='qhead'>Madde 1–5 &nbsp;·&nbsp; 10 = kesinlikle katılmıyorum → 0 = kesinlikle katılıyorum</div>";
-   if(i===6)h+="<div class='qhead'>Madde 6–11 &nbsp;·&nbsp; 0 = kesinlikle katılmıyorum → 10 = kesinlikle katılıyorum</div>";
+   if(i===1)h+="<div class='qhead'>Madde 1–5 (belirtiler) &nbsp;·&nbsp; belirti HİÇ OLMADIYSA 10 &nbsp;·&nbsp; ÇOK OLDUYSA 0<br><span class='qsub'>10 = kesinlikle katılmıyorum → 0 = kesinlikle katılıyorum</span></div>";
+   if(i===6)h+="<div class='qhead'>Madde 6–11 (iyilik hâli) &nbsp;·&nbsp; HİÇ YAPAMIYORSA 0 &nbsp;·&nbsp; TAMAMEN YAPABİLİYORSA 10<br><span class='qsub'>0 = kesinlikle katılmıyorum → 10 = kesinlikle katılıyorum</span></div>";
    var cur=(qv||[])[i-1];
    var chips="";
    for(var n=0;n<=10;n++){
@@ -715,7 +717,8 @@ function obsqorCard(pre,qv){
      chips+="<button type='button' class='nchip"+(on?" on":"")+"' data-i='"+i+"' data-v='"+n+"'>"+n+"</button>";
    }
    h+="<div class='nrow'><div class='lb'><b>"+i+".</b> "+esc(qMet(i))+"</div>"+
-      "<div class='nchips'>"+chips+"</div></div>";
+      "<div class='nchips'>"+chips+"</div>"+
+      "<div class='nends'><span>"+(i<=5?"0 = çok oldu":"0 = hiç katılmıyorum")+"</span><span>"+(i<=5?"10 = hiç olmadı":"10 = tamamen katılıyorum")+"</span></div></div>";
  }
  h+="<div class='total'><span>Toplam (0&ndash;110 · yüksek = iyi)</span><b id='"+pre+"qt'>&mdash;</b></div></div></div>";
  return h;
@@ -897,6 +900,10 @@ async function kaydet(){
    if(qv!==""&&qv!=null&&(isNaN(+qv)||+qv<0||+qv>10)){
     showPanel(task,0,document.querySelectorAll("[id^='pan_"+task+"_']").length);
     toast("ObsQoR madde "+(qi+1)+": 0–10 arası olmalı",1);return;}}}
+ // 2b) ObsQoR madde 3–5 (bulantı, göz kararması, titreme) çoğu 0 ise yön hatası olabilir: onayla ve devam et
+ if(task==="b24"||task==="b48"){var q35=(D[task+"q"]||[]).slice(2,5).filter(function(v){return v!==""&&v!=null&&+v===0;}).length;
+  if(q35>=2&&!confirm("ObsQoR madde 3–5'te 0 seçildi. 0 = belirti ÇOK OLDU demektir (bulantı-kusma, göz kararması, titreme). Belirti hiç olmadıysa 10 seçilmelidir. Girilen değerler doğru mu?")){
+   showPanel(task,0,document.querySelectorAll("[id^='pan_"+task+"_']").length);return;}}
  // 3) Aralık-dışı (klinik) değerler: engelleme, onayla ve devam et
  var badEl=app.querySelector(".f.bad");
  if(badEl){var bk=badEl.id.replace(/^w_/,"");
