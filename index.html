@@ -44,6 +44,16 @@ header .hbtn:active{background:#2d6472}
 .card .in{padding:14px 15px}
 .plist{display:flex;flex-direction:column;gap:10px}
 .ltabs{display:flex;gap:8px;margin-bottom:14px}
+.hedef{display:flex;gap:10px;margin-bottom:12px}
+.hd{flex:1;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:11px 13px;min-width:0}
+.hd .hl{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--teal);font-weight:700}
+.hd .hv{font-family:var(--serif);font-size:24px;color:var(--deep);line-height:1.15;margin-top:3px}
+.hd .hv small{font-family:var(--sans);font-size:13px;color:var(--teal);font-weight:600}
+.hd .hs{font-size:12px;color:#4d6870;margin-top:4px}
+.hd .hs.warn{color:var(--amber);font-weight:650}
+.hbar{height:7px;background:var(--mint);border-radius:6px;margin-top:8px;overflow:hidden}
+.hbar i{display:block;height:100%;background:var(--teal);border-radius:6px}
+@media (max-width:420px){.hedef{flex-direction:column}}
 .ltab{flex:1;border:1px solid var(--line);background:var(--white);color:var(--deep);
   padding:11px 10px;border-radius:10px;font-weight:650;font-size:14px;display:flex;
   align-items:center;justify-content:center;gap:8px;min-height:48px}
@@ -585,6 +595,7 @@ function renderListe(){
  app.innerHTML="<div class='banner'>Hasta <b>adı soyadı</b> ve <b>protokol no</b> yalnızca ekip içi takip içindir, analiz dosyasına girmez; TC kimlik no veya doğum tarihi girmeyin. "+
   "Kayıtlar canlıdır — ekip aynı hastayı eş zamanlı düzenleyebilir.</div>"+
   "<div id='metUyari'></div><div id='pl'></div>";
+ app.insertAdjacentHTML("afterbegin",hedefHTML());
  bar.innerHTML="<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
    "<button class='btn sec' onclick='openVeriSeti()'>Veri seti</button>"+
    "<button class='btn' onclick='yeni()'>Yeni hasta</button>";
@@ -625,6 +636,30 @@ function renderListe(){
    :"<div class='empty sm'>"+emptyTxt+"</div>");
 }
 function setListTab(t){listTab=t;renderListe();}
+/* ── hedef + sözleşme sayacı (liste üstü) ── */
+const HEDEF_N=82, SOZLESME_BITIS=new Date(2027,2,10); // Fitrockr lisansı 10.03.2027
+function hedefHTML(){
+ var ids=Object.keys(RECS),gun=86400000,bugun=new Date();bugun.setHours(0,0,0,0);
+ var alinan=ids.filter(function(i){var r=RECS[i]||{};return r.onam==="Evet"||(r._onam&&r._onam.alindi);});
+ var n=alinan.length,pct=Math.min(100,Math.round(n/HEDEF_N*100));
+ var disla=alinan.filter(function(i){return RECS[i].dahil==="Hayır";}).length;
+ var izl=alinan.filter(function(i){return statusOf(RECS[i])!=="kapali"&&RECS[i].dahil!=="Hayır";}).length;
+ var kalan=Math.ceil((SOZLESME_BITIS-bugun)/gun);
+ var ilk=alinan.map(function(i){return RECS[i].takma||"";}).filter(Boolean).sort()[0];
+ var tahmin="",gec=false;
+ if(ilk&&n>=3&&n<HEDEF_N){var bas=new Date(ilk.slice(0,10)+"T00:00");
+  var gunler=Math.max(7,(bugun-bas)/gun+1),hiz=n/gunler; // hasta/gün
+  var bitis=new Date(bugun.getTime()+Math.ceil((HEDEF_N-n)/hiz)*gun);gec=bitis>SOZLESME_BITIS;
+  tahmin="Bu hızla ("+(hiz*7).toFixed(1).replace(".",",")+"/hafta) "+HEDEF_N+". hasta ≈ "+
+   bitis.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});}
+ return "<div class='hedef'>"+
+  "<div class='hd'><div class='hl'>Hedef</div><div class='hv'>%"+pct+" <small>"+n+" / "+HEDEF_N+" hasta</small></div>"+
+   "<div class='hbar'><i style='width:"+pct+"%'></i></div>"+
+   "<div class='hs'>"+(n-disla-izl)+" tamamlanan · "+izl+" izlemde · "+disla+" dışlanan</div></div>"+
+  "<div class='hd'><div class='hl'>Sözleşme</div><div class='hv'>"+Math.max(0,kalan)+" <small>gün kaldı</small></div>"+
+   "<div class='hs'>Fitrockr lisansı 10.03.2027'de bitiyor</div>"+
+   (tahmin?"<div class='hs"+(gec?" warn":"")+"'>"+esc(tahmin)+(gec?" — sözleşmeden sonra!":"")+"</div>":"")+"</div>"+
+  "</div>";}
 function yeni(){id=null;D={};open2("a",true);}
 
 /* ── canlı veri seti (Firestore anlık; ayrı dosyaya gerek yok) ── */
