@@ -604,17 +604,22 @@ function renderListe(){
    "<span class='pmeta'>"+esc(p._son_giren||"")+"</span></div>"+
    "<div class='steps'><i class='step"+(p._a?" on":"")+"'></i><i class='step"+(p._b24?" on":"")+
    "'></i><i class='step"+(p._b48?" on":"")+"'></i></div>"+
-   "<div class='steplab'><span>başlangıç</span><span>24. saat</span><span>48. saat</span></div></div>";};
- var acik=ids.filter(function(i){return statusOf(RECS[i])!=="kapali";});
- var kapali=ids.filter(function(i){return statusOf(RECS[i])==="kapali";});
- if(listTab!==0&&listTab!==1)listTab=0;
+   "<div class='steplab'><span>başlangıç</span><span>24. saat</span><span>48. saat</span></div>"+
+   (p.dahil==="Hayır"?"<div class='hint'>Dışlanma nedeni: "+(p.not?esc(p.not):"<b>yazılmamış — Notlar alanına ekleyin</b>")+"</div>":"")+"</div>";};
+ // Analize dahil = Hayır olanlar yalnız "Dışlanan" sekmesinde (makalede akış şeması için)
+ var disla=ids.filter(function(i){return (RECS[i]||{}).dahil==="Hayır";});
+ var acik=ids.filter(function(i){return statusOf(RECS[i])!=="kapali"&&disla.indexOf(i)<0;});
+ var kapali=ids.filter(function(i){return statusOf(RECS[i])==="kapali"&&disla.indexOf(i)<0;});
+ if(listTab!==0&&listTab!==1&&listTab!==2)listTab=0;
  var tabs="<div class='ltabs'>"+
    "<button type='button' class='ltab"+(listTab===0?" on":"")+"' onclick='setListTab(0)'>"+
      "Aktif / yatan<span class='lb-cnt'>"+acik.length+"</span></button>"+
    "<button type='button' class='ltab"+(listTab===1?" on":"")+"' onclick='setListTab(1)'>"+
-     "Taburcu<span class='lb-cnt'>"+kapali.length+"</span></button></div>";
- var list=listTab===0?acik:kapali;
- var emptyTxt=listTab===0?"Şu an izlemde (yatan) hasta yok.":"Henüz taburcu edilip kapatılan kayıt yok.";
+     "Taburcu<span class='lb-cnt'>"+kapali.length+"</span></button>"+
+   "<button type='button' class='ltab"+(listTab===2?" on":"")+"' onclick='setListTab(2)'>"+
+     "Dışlanan<span class='lb-cnt'>"+disla.length+"</span></button></div>";
+ var list=listTab===0?acik:(listTab===1?kapali:disla);
+ var emptyTxt=listTab===0?"Şu an izlemde (yatan) hasta yok.":(listTab===1?"Henüz taburcu edilip kapatılan kayıt yok.":"Dışlanan hasta yok.");
  b.className="";
  b.innerHTML=tabs+(list.length?"<div class='plist'>"+list.map(pcardHTML).join("")+"</div>"
    :"<div class='empty sm'>"+emptyTxt+"</div>");
