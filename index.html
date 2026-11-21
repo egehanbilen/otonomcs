@@ -363,7 +363,7 @@ const C_SECTIONS=[
   ["opioid_mg","Toplam opioid (morfin eşd. mg)","num",{min:0,max:200,step:.5}],
   ["antiemetik","Antiemetik kullanıldı","select",{opt:EH}],
   ["bulanti_kusma","Bulantı-kusma","select",{opt:EH}],
-  ["komplikasyon","Komplikasyon (keşifsel)","text",{ph:"Yok"}],
+  ["komplikasyon","Komplikasyon (keşifsel)","selother",{req:1,opt:["Yok","Var"],other:"Var",oph:"Ne oldu? (ör. yara enfeksiyonu, ateş, kanama, reoperasyon)",hint:"48 saat içinde komplikasyon olduysa Var seçip ne olduğunu yazın."}],
   ["taburculuk","Taburculuk (postop saat)","num",{min:12,max:168,step:.5}]
  ]},
  {t:"Cihaz çıkarma & veri kalitesi", f:[
@@ -412,7 +412,7 @@ const RCSQ_ANCHORS=[
  ["Kötü bir gece uykusu","İyi bir gece uykusu"],
  ["Çok gürültülü","Çok sessiz"]];
 const A_KEYS=A.map(function(f){return f[0];}).concat(["endikasyon_diger","uterotonik_diger","antihipertansif_diger"]);
-const C_KEYS=C.map(function(f){return f[0];});
+const C_KEYS=C.map(function(f){return f[0];}).concat(["komplikasyon_diger"]);
 const TASK_KEYS={
  a:  A_KEYS.concat([]),
  b24:["b24q","b24r","b24_nrs_din","b24_nrs_har","b24_gece_emzirme","b24_sedatif"],
@@ -455,7 +455,7 @@ function fh(k,l,t,o){o=o||{};
    i="<input type='hidden' id='x_"+k+"' data-k='"+k+"'>"+
      "<div class='chips' id='c_"+k+"'>"+opts2.map(function(v){
        return "<button type='button' class='chip' data-k='"+esc(k)+"' data-v='"+esc(v)+"'>"+esc(v)+"</button>";}).join("")+"</div>"+
-     "<input class='other' id='x_"+k+"_diger' data-k='"+k+"_diger' type='text' placeholder='Elle girin' style='display:none'>";
+     "<input class='other' id='x_"+k+"_diger' data-k='"+k+"_diger' type='text' placeholder='"+esc(o.oph||"Elle girin")+"' style='display:none'>";
  } else if(t==="id"){
    i="<div class='idbox'><button type='button' class='idstep' onclick='stepId(-1)' aria-label='azalt'>−</button>"+
      "<input id='x_"+k+"' data-k='"+k+"' type='text'"+(o.mono?" data-mono='1'":"")+(o.ph?" placeholder='"+esc(o.ph)+"'":"")+">"+
@@ -891,9 +891,14 @@ function unlockSave(){busy=false;var x=el("sv");if(x){x.disabled=false;x.textCon
 async function kaydet(){
  if(busy||LOCKED)return;
  // 1) Zorunlu alan eksikse: alanı içeren sekmeye geç + adını söyle
- var need=task==="a"?["study_id","hasta_adi","protokol_no","cs_tipi","bebek_dogum","cihaz_no","takma","onam"]:(task==="b48"?["cikarma","dahil"]:[]);
+ var need=task==="a"?["study_id","hasta_adi","protokol_no","cs_tipi","bebek_dogum","cihaz_no","takma","onam"]:(task==="b48"?["cikarma","komplikasyon","dahil"]:[]);
  for(var n=0;n<need.length;n++){var k=need[n];
   if(!D[k]){var lbl=gotoField(k);el("w_"+k).classList.add("bad");toast("Eksik zorunlu alan: "+lbl,1);return;}}
+ // 1b) Komplikasyon "Var" ise ne olduğu yazılmalı
+ if(task==="b48"&&D.komplikasyon==="Var"&&!String(D.komplikasyon_diger||"").trim()){
+  gotoField("komplikasyon");
+  var ko=el("x_komplikasyon_diger");if(ko)ko.focus();
+  toast("Komplikasyon: ne olduğunu yazın",1);return;}
  // 2) ObsQoR maddeleri 0–10 dışıysa engelle (sabit ölçek)
  if(task==="b24"||task==="b48"){var qarr=D[task+"q"]||[];
   for(var qi=0;qi<qarr.length;qi++){var qv=qarr[qi];
