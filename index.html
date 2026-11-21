@@ -592,9 +592,7 @@ function startList(){
 function renderListe(){
  view="list";task=null;id=null;D={};dirty=false;LOCKED=false;head("Hastalar",false);
  el("logoutBtn").classList.remove("hide");
- app.innerHTML="<div class='banner'>Hasta <b>adı soyadı</b> ve <b>protokol no</b> yalnızca ekip içi takip içindir, analiz dosyasına girmez; TC kimlik no veya doğum tarihi girmeyin. "+
-  "Kayıtlar canlıdır — ekip aynı hastayı eş zamanlı düzenleyebilir.</div>"+
-  "<div id='metUyari'></div><div id='pl'></div>";
+ app.innerHTML="<div id='metUyari'></div><div id='pl'></div>";
  app.insertAdjacentHTML("afterbegin",hedefHTML());
  bar.innerHTML="<button class='btn sec' onclick='openMetin()'>Anket metni</button>"+
    "<button class='btn sec' onclick='openVeriSeti()'>Veri seti</button>"+
